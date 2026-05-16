@@ -14,15 +14,22 @@ const BEACHES = [
     distance: "0.8 km from Riva",
     walk: "10 min walk",
     tone: "sun",
-    crowd: 88,           // 0-100 occupancy
-    cap: 1200,           // est capacity
-    here: 1056,
+    crowd: Math.round(2 / 1200 * 100),
+    cap: 1200,
+    here: 2,
     water: 22,
-    weather: "Sunny · 28°C",
-    wait: "20+ min for chairs",
+    weather: "Cloudy · calm",
+    wait: "Plenty of space",
     note: "Famous for picigin — the locals' running splash-ball game.",
     parking: "Full",
     stream: "https://cdn-004.whatsupcams.com/hls/hr_splitbacvice01.m3u8",
+    vlm: {
+      timestamp: "2026-05-16T12:49:00Z",
+      scene_type: "beach",
+      weather: { condition: "cloudy", visibility: "good", wind_estimate: "calm", precipitation_visible: false },
+      people: { estimated_count: 2, estimated_range: { min: 1, max: 3 }, crowd_level: "low", crowd_score: 1 },
+      notes: ["Beach appears empty with only a few individuals visible.", "The weather is overcast, no signs of precipitation."],
+    },
   },
   {
     id: "kasjuni",
@@ -61,7 +68,7 @@ const BEACHES = [
     distance: "2.6 km east",
     walk: "8 min bus",
     tone: "terra",
-    crowd: 10,
+    crowd: Math.round(0 / 2000 * 100),
     cap: 2000, here: 0,
     water: 23,
     weather: "Cloudy · light wind",
@@ -274,10 +281,8 @@ function BeachCard({ beach }) {
           borderRadius: 14,
           overflow: "hidden",
         }}>
-          <MetaCell k="Water" v={`${beach.water}°C`} ic="🌊"/>
-          <MetaCell k="Weather" v={beach.weather} ic="☀"/>
-          <MetaCell k="Distance" v={beach.distance} ic="📍" last/>
-          <MetaCell k="Wait" v={beach.wait} ic="⏱" last/>
+          <MetaCell k="Water" v={`${beach.water}°C`} ic="🌊" last/>
+          <MetaCell k="Weather" v={beach.weather} ic="☀" last/>
         </div>
 
         {/* tip */}
