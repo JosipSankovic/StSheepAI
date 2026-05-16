@@ -29,6 +29,7 @@ const PLACES = [
     cons: ["Long queues during peak season", "Small pizza-focused menu with limited non-pizza options", "Some reports of rushed seating when busy", "Desserts appear limited or unavailable"],
     positives: 980, warnings: 88,
     headline: { tone: "good", text: "Unusually consistent praise across all platforms" },
+    why: ["Extremely consistent praise across public review platforms", "Many guests mention premium ingredients and good central value", "Warnings are mostly about queues, not billing or food quality"],
   },
   {
     id: "347982b2-e3f6-468e-b113-7e31ccefb4da",
@@ -48,6 +49,7 @@ const PLACES = [
     cons: ["Highly polarized reviews across platforms — Google much stronger than Tripadvisor", "Repeated complaints about bland, cold, or poorly executed dishes", "Some complaints about bread charges, bottled water, and tipping pressure", "Service ranges from very friendly to rude or inattentive"],
     positives: 460, warnings: 310,
     headline: { tone: "warn", text: "Polarized reviews — Google vs Tripadvisor gap" },
+    why: ["Google volume is strong, but Tripadvisor feedback is much weaker", "Repeated complaints mention bread charges, bottled water, and tipping pressure", "Safer for casual dishes than breakfast or whole fish"],
   },
   {
     id: "matejuska",
@@ -67,6 +69,7 @@ const PLACES = [
     cons: ["Cash strongly preferred", "40-min wait without booking", "Tight indoor seating"],
     positives: 906, warnings: 92,
     headline: { tone: "good", text: "Locals still eat here" },
+    why: ["Many locals mention fresh seafood and honest bills", "Strong value for a central seafood konoba", "Main warning is operational: book ahead and ask per-kilo fish price"],
   },
   {
     id: "diocletian-grill",
@@ -86,6 +89,7 @@ const PLACES = [
     cons: ["Hidden 12% service charge", "Bills don't match the menu", "Aggressive street hosts", "Slow once the bill arrives", "Heavily overpriced"],
     positives: 709, warnings: 1376,
     headline: { tone: "bad", text: "Hidden 12% service charge" },
+    why: ["Repeated complaints about hidden service charges", "Photo menus, hawkers, and bill disputes are tourist-trap patterns", "Food and service scores are both weak despite the location"],
   },
   {
     id: "fife",
@@ -105,6 +109,7 @@ const PLACES = [
     cons: ["No reservations — expect a wait", "Brusque service", "Shared tables"],
     positives: 1274, warnings: 276,
     headline: { tone: "good", text: "€8 pašticada — best deal in town" },
+    why: ["Reviewers repeatedly mention large portions and low prices", "Local institution with a long-running value reputation", "Warnings are mostly about brusque service and shared tables"],
   },
   {
     id: "bokeria",
@@ -124,6 +129,7 @@ const PLACES = [
     cons: ["Pricier than konobas", "Hard to book in summer", "Portions are small for the price"],
     positives: 1198, warnings: 312,
     headline: { tone: "good", text: "Excellent wine list — locally sourced" },
+    why: ["Strong wine and atmosphere signals across reviews", "Food quality is praised, but portions are often called small", "Good choice if you reserve and expect higher central prices"],
   },
   {
     id: "paradox",
@@ -143,21 +149,72 @@ const PLACES = [
     cons: ["Small space fills fast", "Mostly tapas — not a full dinner"],
     positives: 802, warnings: 122,
     headline: { tone: "good", text: "Only Croatian wine — by the glass" },
+    why: ["Guests repeatedly praise Croatian wine guidance", "Low warning volume compared with positive signals", "Best for drinks and tapas rather than a full dinner"],
   },
 ];
+
+const DEMO_USER_LOCATION = [43.5096, 16.4378];
 
 export default function Reviews() {
   const [view, setView] = React.useState("list"); // list | map
   const [q, setQ] = React.useState("");
   const [openId, setOpenId] = React.useState(null);
+  const [scanState, setScanState] = React.useState("idle");
+  const [scanMessage, setScanMessage] = React.useState("");
+  const [userLocation, setUserLocation] = React.useState(null);
+
+  const placesWithDistance = React.useMemo(() => {
+    const origin = userLocation || DEMO_USER_LOCATION;
+    return PLACES.map(place => ({
+      ...place,
+      distanceMeters: place.coords ? distanceMeters(origin, place.coords) : null,
+      scannedNearby: Boolean(userLocation),
+    })).sort((a, b) => {
+      if (!userLocation) return 0;
+      return (a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity);
+    });
+  }, [userLocation]);
 
   const filtered = q
-    ? PLACES.filter(p =>
+    ? placesWithDistance.filter(p =>
         p.name.toLowerCase().includes(q.toLowerCase()) ||
         p.type.toLowerCase().includes(q.toLowerCase()) ||
         p.where.toLowerCase().includes(q.toLowerCase())
       )
-    : PLACES;
+    : placesWithDistance;
+
+  function scanNearby() {
+    setQ("");
+    setView("map");
+    setScanState("scanning");
+    setScanMessage("Scanning restaurants around you...");
+
+    const finishWith = (coords, message) => {
+      setTimeout(() => {
+        setUserLocation(coords);
+        setScanState("done");
+        setScanMessage(message);
+      }, 800);
+    };
+
+    if (!("geolocation" in navigator)) {
+      finishWith(DEMO_USER_LOCATION, "Demo scan near Split Old Town. Location is not available in this browser.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        finishWith(
+          [position.coords.latitude, position.coords.longitude],
+          "Nearby scan complete. Restaurants are sorted by distance and trust score.",
+        );
+      },
+      () => {
+        finishWith(DEMO_USER_LOCATION, "Demo scan near Split Old Town. Allow location for a real nearby scan.");
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 },
+    );
+  }
 
   return (
     <div>
@@ -169,6 +226,61 @@ export default function Reviews() {
 
       {/* Search */}
       <div style={{ padding: "0 18px", position: "sticky", top: 0, zIndex: 4 }}>
+        <button
+          type="button"
+          onClick={scanNearby}
+          style={{
+            width: "100%",
+            border: 0,
+            borderRadius: 18,
+            padding: "13px 14px",
+            marginBottom: 10,
+            background: scanState === "scanning" ? "var(--sea-deep)" : "linear-gradient(135deg, var(--sea-deep), var(--sea))",
+            color: "#fff",
+            fontFamily: "inherit",
+            fontWeight: 800,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            cursor: "pointer",
+            boxShadow: "0 14px 28px -18px rgba(13,59,102,0.65)",
+          }}
+        >
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <Icon.Map style={{ width: 16, height: 16 }}/>
+            {scanState === "scanning" ? "Scanning nearby..." : "Scan restaurants around me"}
+          </span>
+          <span className="mono" style={{ fontSize: 10, opacity: 0.78 }}>
+            AI TRUST MAP
+          </span>
+        </button>
+
+        {scanMessage && (
+          <div className="fade-up" style={{
+            marginBottom: 10,
+            padding: "9px 12px",
+            borderRadius: 14,
+            background: scanState === "done" ? "rgba(42,138,74,0.1)" : "rgba(29,111,184,0.1)",
+            border: `1px solid ${scanState === "done" ? "rgba(42,138,74,0.18)" : "rgba(29,111,184,0.18)"}`,
+            color: scanState === "done" ? "var(--good)" : "var(--sea-deep)",
+            fontSize: 12,
+            fontWeight: 700,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}>
+            <span style={{
+              width: 7,
+              height: 7,
+              borderRadius: 999,
+              background: scanState === "done" ? "var(--good)" : "var(--sea)",
+              animation: scanState === "scanning" ? "pulseDot 1.2s ease-in-out infinite" : "none",
+            }}/>
+            {scanMessage}
+          </div>
+        )}
+
         <div style={{
           display: "flex", alignItems: "center", gap: 10,
           background: "#fff",
@@ -230,13 +342,13 @@ export default function Reviews() {
         {view === "list" ? (
           <ListView places={filtered} onOpen={setOpenId} q={q}/>
         ) : (
-          <MapView places={filtered} onOpen={setOpenId}/>
+          <MapView places={filtered} onOpen={setOpenId} userLocation={userLocation}/>
         )}
       </div>
 
       {/* Detail sheet */}
       {openId && (
-        <DetailSheet place={PLACES.find(p => p.id === openId)} onClose={() => setOpenId(null)}/>
+        <DetailSheet place={placesWithDistance.find(p => p.id === openId)} onClose={() => setOpenId(null)}/>
       )}
     </div>
   );
@@ -309,6 +421,12 @@ function PlaceCard({ place, onOpen, delay = 0, q }) {
             </span>
             <span style={{ color: "var(--ink-mute)" }}>·</span>
             <span>{place.reviews.toLocaleString()} reviews</span>
+            {place.distanceMeters != null && place.scannedNearby && (
+              <>
+                <span style={{ color: "var(--ink-mute)" }}>·</span>
+                <span>{formatDistance(place.distanceMeters)}</span>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -388,9 +506,25 @@ function TrustDial({ value, risk }) {
   );
 }
 
+function distanceMeters(a, b) {
+  const toRad = (value) => value * Math.PI / 180;
+  const R = 6371000;
+  const dLat = toRad(b[0] - a[0]);
+  const dLon = toRad(b[1] - a[1]);
+  const lat1 = toRad(a[0]);
+  const lat2 = toRad(b[0]);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return Math.round(2 * R * Math.asin(Math.sqrt(h)));
+}
+
+function formatDistance(meters) {
+  if (meters < 1000) return `${meters} m away`;
+  return `${(meters / 1000).toFixed(1)} km away`;
+}
+
 /* ── Map ───────────────────────────────────────────────────────────── */
 
-function MapView({ places, onOpen }) {
+function MapView({ places, onOpen, userLocation }) {
   const [hover, setHover] = React.useState(places[0]?.id);
   const activeId = places.some(p => p.id === hover) ? hover : places[0]?.id;
   const active = places.find(p => p.id === activeId) || places[0];
@@ -403,6 +537,7 @@ function MapView({ places, onOpen }) {
           activeId={activeId}
           onPick={setHover}
           onOpen={onOpen}
+          userLocation={userLocation}
         />
 
         {/* Bottom info card */}
@@ -430,6 +565,11 @@ function MapView({ places, onOpen }) {
               <div style={{ fontSize: 12, color: "var(--ink-mute)", marginTop: 2 }}>
                 {active.type} · {active.where}
               </div>
+              {active.distanceMeters != null && active.scannedNearby && (
+                <div className="mono" style={{ fontSize: 10, color: "var(--sea)", marginTop: 4 }}>
+                  {formatDistance(active.distanceMeters)} · scanned nearby
+                </div>
+              )}
             </div>
             <Icon.ArrowRight style={{ color: "var(--ink-mute)" }}/>
           </button>
@@ -448,7 +588,7 @@ function MapView({ places, onOpen }) {
           color: "var(--ink-soft)",
           display: "inline-flex", alignItems: "center", gap: 6,
         }}>
-          <Icon.Map style={{ width: 12, height: 12 }}/> SPLIT · OLD TOWN
+        <Icon.Map style={{ width: 12, height: 12 }}/> SPLIT · OLD TOWN
         </div>
 
         <div style={{
@@ -467,16 +607,17 @@ function MapView({ places, onOpen }) {
       </div>
 
       <div style={{ marginTop: 12, fontSize: 12, color: "var(--ink-mute)", textAlign: "center" }}>
-        Tap a pin to inspect · {places.length} venues
+        Tap a pin to inspect · {places.length} venues{userLocation ? " · sorted nearby" : ""}
       </div>
     </div>
   );
 }
 
-function SplitLeafletMap({ places, activeId, onPick, onOpen }) {
+function SplitLeafletMap({ places, activeId, onPick, onOpen, userLocation }) {
   const mapEl = React.useRef(null)
   const mapRef = React.useRef(null)
   const markersRef = React.useRef({})
+  const userMarkerRef = React.useRef(null)
 
   React.useEffect(() => {
     if (!mapEl.current || mapRef.current) return
@@ -513,8 +654,27 @@ function SplitLeafletMap({ places, activeId, onPick, onOpen }) {
 
     Object.values(markersRef.current).forEach(marker => marker.remove())
     markersRef.current = {}
+    if (userMarkerRef.current) {
+      userMarkerRef.current.remove()
+      userMarkerRef.current = null
+    }
 
     const bounds = []
+
+    if (userLocation) {
+      userMarkerRef.current = L.circleMarker(userLocation, {
+        radius: 8,
+        color: "#fff",
+        weight: 2,
+        fillColor: "#1d6fb8",
+        fillOpacity: 1,
+      }).addTo(map).bindTooltip("You are here", {
+        direction: "top",
+        offset: [0, -8],
+        opacity: 0.94,
+      })
+      bounds.push(userLocation)
+    }
 
     places.forEach(place => {
       if (!place.coords) return
@@ -548,7 +708,7 @@ function SplitLeafletMap({ places, activeId, onPick, onOpen }) {
     }
 
     requestAnimationFrame(() => map.invalidateSize())
-  }, [places, activeId, onPick, onOpen])
+  }, [places, activeId, onPick, onOpen, userLocation])
 
   React.useEffect(() => {
     const marker = markersRef.current[activeId]
@@ -683,6 +843,71 @@ function DetailSheet({ place, onClose }) {
             </div>
           </Card>
 
+          <div style={{
+            marginTop: 16,
+            padding: "15px 16px",
+            background: "#fff",
+            border: "1px solid var(--line)",
+            borderRadius: 18,
+            boxShadow: "0 8px 22px -18px rgba(13,28,44,0.25)",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+              <div>
+                <div className="tag">Why this score?</div>
+                <div style={{ fontSize: 13, color: "var(--ink-mute)", marginTop: 3 }}>
+                  AI pattern scan across praise, warnings, and tourist-risk signals.
+                </div>
+              </div>
+              <div className="mono" style={{
+                padding: "5px 8px",
+                borderRadius: 999,
+                background: place.risk === "high" ? "rgba(176,58,46,0.10)" : place.risk === "medium" ? "rgba(201,132,16,0.12)" : "rgba(42,138,74,0.10)",
+                color: riskColor,
+                fontSize: 10,
+                fontWeight: 800,
+              }}>
+                {place.trust}/100
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 9, marginTop: 13 }}>
+              {(place.why || buildWhySignals(place)).map((item, i) => (
+                <div
+                  key={item}
+                  className="fade-up"
+                  style={{
+                    animationDelay: `${i * 90}ms`,
+                    display: "flex",
+                    gap: 9,
+                    alignItems: "flex-start",
+                    fontSize: 13,
+                    color: "var(--ink)",
+                    lineHeight: 1.35,
+                  }}
+                >
+                  <span style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: 999,
+                    background: i === 0 ? riskColor : "var(--paper)",
+                    border: i === 0 ? 0 : "1px solid var(--line)",
+                    color: i === 0 ? "#fff" : riskColor,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    fontSize: 11,
+                    fontWeight: 900,
+                    marginTop: 1,
+                  }}>
+                    {i + 1}
+                  </span>
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Category ratings */}
           <div style={{ marginTop: 22 }}>
             <div className="tag">Ratings</div>
@@ -753,6 +978,14 @@ function Stars({ n }) {
       })}
     </span>
   );
+}
+
+function buildWhySignals(place) {
+  return [
+    place.headline.text,
+    place.pros[0],
+    place.cons[0],
+  ].filter(Boolean);
 }
 
 function RatingRow({ emoji, label, value, inverted, last, delay = 0 }) {
