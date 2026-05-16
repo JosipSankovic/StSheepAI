@@ -541,8 +541,26 @@ function ResultView({ lang, copy, result, onRetake, onLang }) {
   ];
   const audioText = buildAudioText(name, cards);
   const speechLang = LANGS.find(L => L.code === lang)?.speech || "en-US";
+  const autoPlayedRef = React.useRef(false);
 
   React.useEffect(() => () => stopGuideAudio(), []);
+
+  React.useEffect(() => {
+    if (autoPlayedRef.current) return;
+    autoPlayedRef.current = true;
+
+    const timer = window.setTimeout(() => {
+      const didStart = speakGuideText(audioText, speechLang, () => setIsSpeaking(false));
+      if (didStart) {
+        setAudioMessage("Auto-playing your guide. Tap stop anytime.");
+        setIsSpeaking(true);
+      } else {
+        setAudioMessage("Tap play to hear the guide in this browser.");
+      }
+    }, 450);
+
+    return () => window.clearTimeout(timer);
+  }, [audioText, speechLang]);
 
   function playAudio() {
     const didStart = speakGuideText(audioText, speechLang, () => setIsSpeaking(false));
@@ -620,7 +638,9 @@ function ResultView({ lang, copy, result, onRetake, onLang }) {
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
             <div>
               <div className="tag" style={{ color: "rgba(255,255,255,0.68)" }}>Audio guide</div>
-              <div style={{ fontWeight: 750, marginTop: 2 }}>Listen instead of reading</div>
+              <div style={{ fontWeight: 750, marginTop: 2 }}>
+                {isSpeaking ? "Speaking now" : "Listen instead of reading"}
+              </div>
             </div>
             <div style={{
               width: 38,
