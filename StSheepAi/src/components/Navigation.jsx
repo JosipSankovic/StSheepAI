@@ -1,7 +1,6 @@
 const navItems = [
   { id: 'reviews', label: 'Review Intelligence' },
   { id: 'photo-guide', label: 'AI Photo Guide' },
-  { id: 'beaches', label: 'Beach Monitor' },
 ]
 
 function Navigation({ activePage, onChangePage }) {
@@ -23,3 +22,4 @@ function Navigation({ activePage, onChangePage }) {
 }
 
 export default Navigation
+

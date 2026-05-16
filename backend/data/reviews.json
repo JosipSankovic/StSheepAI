@@ -1,0 +1,92 @@
+[
+  {
+    "id": "c95165f4-5ca5-4c9f-9e3d-d0f3c50fea6c",
+    "name": "Pizzeria Sette Sorelle",
+    "location": "Split, Croatia",
+    "address": "Trg Franje Tuđmana 3, 21000 Split, Croatia",
+    "timestamp": "2026-05-16T00:00:00Z",
+    "cuisine_type": "Italian / Neapolitan pizza",
+    "price_level": "€€",
+    "overall_rating": 9.3,
+    "food_rating": 9.5,
+    "service_rating": 8.7,
+    "ambiance_rating": 9.0,
+    "summary": "Pizzeria Sette Sorelle appears to be one of Split’s most consistently praised casual restaurants, especially for Neapolitan-style pizza. The main risks are queues, limited menu choice, and occasional rushed service at peak times rather than food quality or billing concerns.",
+    "pros": [
+      "Extremely strong review profile across multiple sources",
+      "Highly praised Neapolitan-style dough and crust",
+      "Fresh premium ingredients and well-liked toppings",
+      "Central location near Split Riva",
+      "Rooftop/upstairs terrace frequently praised",
+      "Generally friendly, fast and knowledgeable service",
+      "Good value for central Split given the quality"
+    ],
+    "cons": [
+      "Long queues and reservation pressure during peak season",
+      "Small pizza-focused menu with limited non-pizza options",
+      "Some reports of rushed/time-limited seating when busy",
+      "Desserts appear limited or unavailable",
+      "Occasional complaints that service while waiting can feel unfriendly"
+    ],
+    "reviewer_note": "Publicly gathered review data indicates a very reliable pizza-focused restaurant with unusually consistent praise. Main tourist cautions are practical rather than serious: book ahead, expect crowds, and do not expect a broad Italian menu.",
+    "confidence": 0.9
+  },
+  {
+    "id": "347982b2-e3f6-468e-b113-7e31ccefb4da",
+    "name": "Restoran Aspalathos",
+    "location": "Split, Croatia",
+    "address": "Matošića ul. 21, 21000 Split, Croatia",
+    "timestamp": "2026-05-16T00:00:00Z",
+    "cuisine_type": "Mediterranean, Croatian, European, Grill, Seafood, Italian",
+    "price_level": "$$–$$$",
+    "overall_rating": 6.8,
+    "food_rating": 6.5,
+    "service_rating": 6.6,
+    "ambiance_rating": 7.6,
+    "summary": "Restoran Aspalathos is a mixed but usable tourist-area restaurant: strong Google volume and many positive casual-dining experiences, but repeated Tripadvisor complaints about food execution, service inconsistency, and add-on pricing create meaningful caution.",
+    "pros": [
+      "Central Split location near the historic core",
+      "Large Google review volume with generally positive rating",
+      "Frequently praised black risotto, seafood risotto, grilled squid, sea bass, pizza, pasta, burgers, and meat platters",
+      "Many positive reviews mention friendly named servers and helpful English-speaking service",
+      "Outdoor seating and casual tourist-friendly atmosphere"
+    ],
+    "cons": [
+      "Highly polarized reviews across platforms, with Google much stronger than Tripadvisor",
+      "Repeated Tripadvisor complaints about bland, cold, raw, salty, oily, or poorly executed dishes",
+      "Breakfast receives several specific negative mentions",
+      "Some complaints about pricing, bottled water, bread charges, and tipping pressure",
+      "Service appears inconsistent, ranging from very friendly to rude or inattentive"
+    ],
+    "reviewer_note": "Public review data suggests a convenient and sometimes very enjoyable central Split restaurant, but the gap between high Google-derived ratings and much weaker Tripadvisor feedback makes it a medium-risk choice, especially for breakfast or price-sensitive visitors.",
+    "confidence": 0.74
+  },
+  {
+    "id": "6fabcc82-9360-46b5-8f1f-b86517203f19",
+    "name": "Restoran Aspalathos",
+    "location": "Split, Croatia",
+    "address": "Matošića ul. 21, 21000 Split, Croatia",
+    "timestamp": "2026-05-16T00:00:00Z",
+    "cuisine_type": "Mediterranean, Croatian, European, Italian, seafood, grill, pizza",
+    "price_level": "$$",
+    "overall_rating": 6.8,
+    "food_rating": 6.5,
+    "service_rating": 6.8,
+    "ambiance_rating": 7.2,
+    "summary": "Mixed but usable central Split restaurant. Large Google-derived review volume is fairly positive, but Tripadvisor is much weaker with repeated complaints about inconsistent food, breakfast quality, seafood doneness, service handling, and tourist-area pricing. Safer for casual pizza, pasta, risotto, or grilled squid than breakfast or whole fish.",
+    "pros": [
+      "Central pedestrian-area location near Split old town attractions.",
+      "Many guests praise friendly staff and named servers.",
+      "Black risotto, grilled squid, pizza, pasta, seafood risotto, and meat platters receive repeated positive mentions.",
+      "Terrace and casual atmosphere are convenient for tourists."
+    ],
+    "cons": [
+      "Review pattern is split: strong Google-derived ratings but much weaker Tripadvisor feedback.",
+      "Repeated complaints about inconsistent food, especially breakfast, pancakes, whole fish, seafood doneness, and some low-quality ingredients.",
+      "Some tourists report poor value, extra charges for bread or bottled water, and unclear pricing expectations.",
+      "Service is praised often but also has recurring complaints about rude, slow, or unhelpful staff during problems."
+    ],
+    "reviewer_note": "Assessment is based on gathered public review intelligence from Google-derived aggregators, Tripadvisor, Restaurant Guru, Wanderlog, Sluurpy, Foursquare, TripTap, and related listings. Direct live verification of Google Maps and the most recent individual reviews was not available, so current ratings may differ.",
+    "confidence": 0.68
+  }
+]
