@@ -8,18 +8,45 @@ The UI is presented as a mobile-first phone mockup running in the browser.
 
 ## Features
 
-### Reviews — Restaurant Trust Analysis
-Browse Split restaurants with AI-generated trust scores. Each place shows a risk level (low / medium / high), aggregated pros and cons, and per-category ratings (food, service, atmosphere, price).
+### Reviews — AI Restaurant Trust Analysis
+Tourist review platforms are unreliable — ratings are gamed, fake reviews are common, and a 4.5-star score on Google can hide dozens of complaints buried in one-star reviews that most visitors never read. SplitTura solves this by running every restaurant through a deep AI analysis before the tourist ever opens the app.
 
-> Currently the data is hardcoded. The roadmap is to build a backend pipeline that scrapes Google, TripAdvisor, and other sources, runs all reviews through an LLM to generate a structured summary, and stores the result in a database served via API.
+**How the AI review works**
+Given a restaurant name and address, GPT-5.5 performs a deep research pass — reading and weighing all available reviews from Google, TripAdvisor, and similar platforms. It identifies recurring patterns across hundreds of reviews, separates genuine praise from inflated scores, and flags specific tourist traps (hidden charges, rushed service, bait-and-switch menus). The output is a structured trust summary stored in the database and served to the frontend.
 
-### AI Photo Guide *(demo)*
+Each restaurant card shows:
+- **Trust score** (0–100) and a risk level: low / medium / high
+- **Headline verdict** — one sentence capturing the honest consensus
+- **Pros and cons** — the most repeated genuine observations
+- **Per-category ratings** — food, service, atmosphere, price, and booking difficulty scored independently
+- **Positive vs. warning review counts** — so you can see the ratio at a glance
+
+**List view and Map view**
+The screen toggles between two views. The **list view** is a searchable, scrollable feed of all restaurants with trust scores and tags visible at a glance. The **map view** renders an interactive Leaflet map of Split's old town with colour-coded pins — green for low risk, amber for medium, red for high — so tourists can see which restaurants around them are trustworthy before they walk in. Tapping a pin or a list card opens a full detail sheet with the complete AI summary, all ratings, and the full pros/cons breakdown.
+
+This matters because the difference between a low-risk and high-risk restaurant in Split's tourist centre can be the difference between a memorable meal and an overpriced disappointment.
+
+### AI Photo Guide
 Point your camera at a Split landmark and get an instant explanation — what it is, historical facts, and how it's used today. Supports 9 languages (EN, HR, DE, IT, FR, ES, JA, ZH, KO).
 
-> The scan animation and result cards are a UI demo. Live landmark recognition via an AI vision API is planned for a future version.
+The app accesses the device camera via `getUserMedia`, captures a frame on shutter press, and sends the image along with the user's GPS coordinates to the backend. The backend calls GPT-4o with the image and location context and returns the landmark name, a confidence score, and three info cards — all in the user's chosen language. Results are read aloud via the Web Speech API.
 
 ### Beach Monitor
-Live webcam streams for Split's beaches (Bačvice, Kašjuni, Bene, Žnjan, and more). A backend scheduler captures a frame from each stream every N minutes, sends it to GPT-4o for analysis, and stores crowd level, weather conditions, and people count as a JSON sidecar next to the image.
+In summer, Split's beaches go from empty to dangerously overcrowded within a couple of hours — and there is no reliable way for a tourist to know which beach is worth the trip before they leave their accommodation. SplitTura solves this with a real-time beach intelligence system driven by live webcams and AI vision.
+
+**How it works**
+Each beach has a public webcam stream. The backend scheduler captures a still frame from every stream at a configurable interval (default every 30 minutes) using ffmpeg. Each captured frame is immediately sent to GPT-4o as a vision task. The model analyses the image and returns structured JSON — estimated crowd count, crowd level (low / moderate / crowded / very crowded), weather condition, wind estimate, visibility, and image quality metadata. The JSON sidecar is stored next to the image on disk and served to the frontend via the `/beaches` API.
+
+**What the app shows**
+Each beach card in the app displays:
+- **Live HLS webcam stream** — watch the beach in real time directly in the app
+- **Crowd level and score** — derived from the latest VLM analysis, shown as a percentage of beach capacity
+- **People count estimate** — the model's best estimate of how many people are currently on the beach
+- **Weather and sea conditions** — condition, wind, and visibility as read from the webcam image
+- **Water temperature** — sourced per beach
+
+**Why it matters**
+A tourist who walks 30 minutes to Bačvice on a Saturday in August only to find it standing-room only has wasted their morning. The Beach Monitor gives them the same situational awareness a local has — glance at the app, pick the beach that has space, and arrive knowing what to expect.
 
 ---
 
@@ -30,8 +57,8 @@ StSheepAI/
 ├── backend/          # FastAPI — beach monitor API
 │   ├── main.py
 │   ├── config.py
-│   ├── routers/      # /beaches  /restaurants
-│   ├── services/     # capture_service, analysis_service, beach_service
+│   ├── routers/      # /beaches  /landmarks  /restaurants
+│   ├── services/     # capture_service, analysis_service, beach_service, landmark_service
 │   ├── scheduler/    # APScheduler job — capture + analyze on interval
 │   ├── models/       # Pydantic models
 │   └── data/         # beaches.json, reviews.json
