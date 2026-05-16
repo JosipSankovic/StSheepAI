@@ -746,6 +746,7 @@
   .app-nav {
     grid-template-columns: repeat(2, max-content);
   }
+}
 
   .score-row {
     grid-template-columns: 126px 1fr;
@@ -763,7 +764,6 @@
   .signal-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-}
 
 @media (min-width: 920px) {
   .app-header {

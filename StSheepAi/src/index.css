@@ -20,9 +20,25 @@
   --bar-track: #e3edf2;
   --shadow-soft: 0 16px 38px rgba(12, 72, 96, 0.08);
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --text: var(--ink-700);
+  --text-muted: var(--ink-500);
+  --text-h: var(--ink-950);
+  --bg: #eef8fb;
+  --surface: var(--glass);
+  --sand: var(--sand-50);
+  --border: var(--line);
+  --border-strong: var(--line-strong);
+  --accent: var(--sea-500);
+  --accent-strong: var(--sea-700);
+  --accent-bg: var(--sea-100);
+  --focus-ring: rgba(17, 166, 200, 0.24);
+  --rating-bg: rgba(17, 166, 200, 0.1);
+  --score-ring: rgba(40, 167, 111, 0.28);
+  --positive: var(--mint-500);
+  --warning: var(--amber-500);
+  --advice-bg: rgba(220, 246, 251, 0.72);
+  --advice-border: rgba(17, 166, 200, 0.28);
+  --bar-track: rgba(8, 46, 66, 0.08);
 
   font: 18px/145% var(--sans);
   letter-spacing: 0;
@@ -35,10 +51,6 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -67,8 +79,22 @@
 }
 
 body {
+  min-width: 320px;
+  min-height: 100svh;
   margin: 0;
   min-width: 320px;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(8, 46, 66, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(8, 46, 66, 0.035) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.65), transparent 78%);
 }
 
 #root {
@@ -79,10 +105,12 @@ body {
 }
 
 h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
+h2,
+h3 {
+  margin: 0;
   color: var(--text-h);
+  font-family: var(--heading);
+  letter-spacing: -0.02em;
 }
 
 h1 {
@@ -94,6 +122,7 @@ h1 {
     font-size: 36px;
   }
 }
+
 h2 {
   font-size: 24px;
   line-height: 118%;
@@ -103,6 +132,7 @@ h2 {
     font-size: 20px;
   }
 }
+
 p {
   margin: 0;
 }
@@ -114,9 +144,6 @@ select {
   font-family: var(--mono);
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+a {
+  color: inherit;
 }
