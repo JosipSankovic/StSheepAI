@@ -216,28 +216,76 @@ const RESULTS = {
 };
 
 export default function Photo() {
-  const [step, setStep] = React.useState("lang");   // lang | camera | scanning | result
+  const [step, setStep] = React.useState("lang");
   const [lang, setLang] = React.useState(null);
   const [pickedId, setPickedId] = React.useState(null);
+  const [aiResult, setAiResult] = React.useState(null);
+  const [capturedImage, setCapturedImage] = React.useState(null);
 
   const copy = COPY[lang] || COPY.en;
-  const result = pickedId ? RESULTS[pickedId] : null;
+  const demoResult = pickedId ? RESULTS[pickedId] : null;
 
   const goCamera = (code) => { setLang(code); setStep("camera"); };
-  const capture = (id) => {
+
+  const captureDemoId = (id) => {
     setPickedId(id);
+    setAiResult(null);
+    setCapturedImage(null);
     setStep("scanning");
     setTimeout(() => setStep("result"), 1900);
   };
-  const reset = () => { setStep("camera"); setPickedId(null); };
+
+  const captureReal = async (imageB64) => {
+    setCapturedImage(imageB64);
+    setPickedId(null);
+    setAiResult(null);
+    setStep("scanning");
+
+    let lat = 43.5089, lng = 16.4301;
+    try {
+      const pos = await new Promise((res, rej) =>
+        navigator.geolocation.getCurrentPosition(res, rej, { timeout: 5000 })
+      );
+      lat = pos.coords.latitude;
+      lng = pos.coords.longitude;
+    } catch {}
+
+    try {
+      const res = await fetch("http://localhost:8000/landmarks/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: imageB64, lat, lng, language: lang }),
+      });
+      const data = await res.json();
+      setAiResult(data);
+      setStep("result");
+    } catch {
+      setPickedId("peristyle");
+      setStep("result");
+    }
+  };
+
+  const reset = () => {
+    setStep("camera");
+    setPickedId(null);
+    setAiResult(null);
+    setCapturedImage(null);
+  };
 
   return (
     <div>
       {step === "lang" && <LangPicker onPick={goCamera}/>}
-      {step === "camera" && <CameraView copy={copy} onCapture={capture} onBackLang={() => setStep("lang")}/>}
-      {step === "scanning" && <Scanning copy={copy} pickedId={pickedId}/>}
-      {step === "result" && result && (
-        <ResultView lang={lang} copy={copy} result={result} onRetake={reset} onLang={() => setStep("lang")}/>
+      {step === "camera" && (
+        <CameraView copy={copy} onCaptureDemoId={captureDemoId} onCaptureReal={captureReal} onBackLang={() => setStep("lang")}/>
+      )}
+      {step === "scanning" && (
+        <Scanning copy={copy} pickedId={pickedId} capturedImage={capturedImage}/>
+      )}
+      {step === "result" && aiResult && (
+        <AiResultView lang={lang} copy={copy} result={aiResult} capturedImage={capturedImage} onRetake={reset} onLang={() => setStep("lang")}/>
+      )}
+      {step === "result" && demoResult && !aiResult && (
+        <ResultView lang={lang} copy={copy} result={demoResult} onRetake={reset} onLang={() => setStep("lang")}/>
       )}
     </div>
   );
@@ -329,8 +377,42 @@ const DEMO_PHOTOS = {
   },
 };
 
-function CameraView({ copy, onCapture, onBackLang }) {
-  const previewLandmark = LANDMARKS[0];
+function CameraView({ copy, onCaptureDemoId, onCaptureReal, onBackLang }) {
+  const videoRef = React.useRef(null);
+  const streamRef = React.useRef(null);
+  const [hasCamera, setHasCamera] = React.useState(false);
+
+  React.useEffect(() => {
+    let mounted = true;
+    navigator.mediaDevices?.getUserMedia({ video: { facingMode: "environment" } })
+      .then(stream => {
+        if (!mounted) { stream.getTracks().forEach(t => t.stop()); return; }
+        streamRef.current = stream;
+        setHasCamera(true);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+      streamRef.current?.getTracks().forEach(t => t.stop());
+    };
+  }, []);
+
+  // Attach stream after the <video> element mounts (hasCamera triggers the render)
+  React.useEffect(() => {
+    if (hasCamera && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+    }
+  }, [hasCamera]);
+
+  const captureFrame = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+    onCaptureReal(canvas.toDataURL("image/jpeg", 0.85).split(",")[1]);
+  };
 
   return (
     <div>
@@ -346,39 +428,28 @@ function CameraView({ copy, onCapture, onBackLang }) {
         <div className="tag">Step 2 / 3</div>
       </div>
 
-      {/* Localized instruction */}
       <div style={{ padding: "0 22px 16px" }}>
-        <div className="serif" style={{
-          fontSize: 22, lineHeight: 1.2, color: "var(--ink)",
-          textWrap: "balance",
-        }}>
+        <div className="serif" style={{ fontSize: 22, lineHeight: 1.2, color: "var(--ink)", textWrap: "balance" }}>
           {copy.ready}
         </div>
       </div>
 
-      {/* Viewfinder */}
       <div style={{ padding: "0 18px" }}>
         <div style={{
-          position: "relative",
-          aspectRatio: "3/4",
-          borderRadius: 24,
-          overflow: "hidden",
-          background: "#0c1219",
+          position: "relative", aspectRatio: "3/4", borderRadius: 24,
+          overflow: "hidden", background: "#0c1219",
           boxShadow: "0 18px 40px -20px rgba(0,0,0,0.5)",
         }}>
-          {/* Demo camera feed */}
-          <DemoPhoto
-            landmarkId={previewLandmark.id}
-            tone={previewLandmark.tone}
-            label="Live demo camera"
-            ratio="3/4"
-            style={{ borderRadius: 0, height: "100%", aspectRatio: "auto", position: "absolute", inset: 0 }}
-          />
+          {hasCamera ? (
+            <video ref={videoRef} autoPlay playsInline muted
+              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}/>
+          ) : (
+            <DemoPhoto landmarkId="peristyle" tone="sea" label="Live demo camera" ratio="3/4"
+              style={{ borderRadius: 0, height: "100%", aspectRatio: "auto", position: "absolute", inset: 0 }}/>
+          )}
 
-          {/* corner brackets */}
           <Corners/>
 
-          {/* faux scan line */}
           <div style={{
             position: "absolute", left: "8%", right: "8%", top: "50%",
             height: 1, background: "rgba(245,184,30,0.7)",
@@ -386,23 +457,23 @@ function CameraView({ copy, onCapture, onBackLang }) {
             animation: "scan 3.4s ease-in-out infinite",
           }}/>
 
-          {/* viewfinder helper text */}
           <div style={{
             position: "absolute", top: 16, left: 16, right: 16,
             display: "flex", justifyContent: "space-between", alignItems: "center",
           }}>
             <div style={{
-              padding: "5px 10px",
-              borderRadius: 999,
-              background: "rgba(13,28,44,0.6)",
-              backdropFilter: "blur(6px)",
+              padding: "5px 10px", borderRadius: 999,
+              background: "rgba(13,28,44,0.6)", backdropFilter: "blur(6px)",
               color: "#fff", fontSize: 11,
-              fontFamily: "JetBrains Mono, monospace",
-              letterSpacing: 1,
+              fontFamily: "JetBrains Mono, monospace", letterSpacing: 1,
               display: "inline-flex", alignItems: "center", gap: 6,
             }}>
-              <span style={{ width: 6, height: 6, borderRadius: 999, background: "#ff4757", animation: "blink 1.4s ease-in-out infinite" }}/>
-              LIVE
+              <span style={{
+                width: 6, height: 6, borderRadius: 999,
+                background: hasCamera ? "#2ed573" : "#ff4757",
+                animation: "blink 1.4s ease-in-out infinite",
+              }}/>
+              {hasCamera ? "LIVE" : "DEMO"}
             </div>
             <div style={{
               padding: "5px 10px", borderRadius: 999,
@@ -413,7 +484,8 @@ function CameraView({ copy, onCapture, onBackLang }) {
           </div>
 
           <div style={{
-            position: "absolute", left: 16, right: 16, bottom: 16,
+            position: "absolute", left: 16, right: 16,
+            bottom: hasCamera ? 80 : 16,
             textAlign: "center", color: "#fff",
             fontSize: 12, fontWeight: 500,
             textShadow: "0 1px 3px rgba(0,0,0,0.5)",
@@ -421,23 +493,34 @@ function CameraView({ copy, onCapture, onBackLang }) {
             {copy.instr}
           </div>
 
+          {hasCamera && (
+            <button onClick={captureFrame} aria-label={copy.capture} style={{
+              position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)",
+              width: 64, height: 64, borderRadius: 999,
+              background: "#fff", border: "5px solid rgba(255,255,255,0.45)",
+              cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: 0,
+            }}>
+              <div style={{ width: 48, height: 48, borderRadius: 999, background: "#fff", border: "2px solid #ccc" }}/>
+            </button>
+          )}
+
           <style>{`
-            @keyframes scan {
-              0%, 100% { top: 16%; }
-              50% { top: 84%; }
-            }
+            @keyframes scan { 0%, 100% { top: 16%; } 50% { top: 84%; } }
             @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
           `}</style>
         </div>
       </div>
 
-      {/* Demo selection */}
       <div style={{ padding: "16px 22px 8px" }}>
-        <div className="tag">Demo · tap a real sample photo to simulate</div>
+        <div className="tag">
+          {hasCamera ? "Or tap a demo sample below" : "Demo · tap a sample to try"}
+        </div>
       </div>
       <div style={{ padding: "0 18px 24px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         {LANDMARKS.map((L, i) => (
-          <button key={L.id} onClick={() => onCapture(L.id)} className="fade-up"
+          <button key={L.id} onClick={() => onCaptureDemoId(L.id)} className="fade-up"
             style={{
               animationDelay: `${i * 50}ms`,
               padding: 0, borderRadius: 14, overflow: "hidden",
@@ -466,8 +549,8 @@ function Corners() {
 
 /* ── Step 3: scanning ───────────────────────────────────────────────── */
 
-function Scanning({ copy, pickedId }) {
-  const tone = (RESULTS[pickedId] && RESULTS[pickedId].tone) || "sea";
+function Scanning({ copy, pickedId, capturedImage }) {
+  const tone = (pickedId && RESULTS[pickedId]?.tone) || "sea";
   return (
     <div style={{ padding: "0 18px 24px" }}>
       <div style={{ padding: "0 4px 12px" }}>
@@ -480,7 +563,12 @@ function Scanning({ copy, pickedId }) {
         borderRadius: 24, overflow: "hidden",
         background: "#0c1219",
       }}>
-        <DemoPhoto landmarkId={pickedId} tone={tone} ratio="3/4" style={{ borderRadius: 0, height: "100%", aspectRatio: "auto", position: "absolute", inset: 0 }}/>
+        {capturedImage ? (
+          <img src={`data:image/jpeg;base64,${capturedImage}`} alt="captured"
+            style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0, display: "block" }}/>
+        ) : (
+          <DemoPhoto landmarkId={pickedId} tone={tone} ratio="3/4" style={{ borderRadius: 0, height: "100%", aspectRatio: "auto", position: "absolute", inset: 0 }}/>
+        )}
         <div style={{ position: "absolute", inset: 0, background: "rgba(13,28,44,0.55)" }}/>
 
         {/* scanning grid */}
@@ -526,7 +614,123 @@ function Scanning({ copy, pickedId }) {
   );
 }
 
-/* ── Step 4: result — 3 cards ───────────────────────────────────────── */
+/* ── Step 4a: real AI result ────────────────────────────────────────── */
+
+function AiResultView({ lang, copy, result, capturedImage, onRetake, onLang }) {
+  const [isSpeaking, setIsSpeaking] = React.useState(false);
+  const [audioMessage, setAudioMessage] = React.useState("");
+  const cards = [
+    { icon: "📜", label: copy.labels.c1, body: result.c1, tone: "sea" },
+    { icon: "✦",  label: copy.labels.c2, body: result.c2, tone: "sun" },
+    { icon: "✺",  label: copy.labels.c3, body: result.c3, tone: "terra" },
+  ];
+  const speechLang = LANGS.find(L => L.code === lang)?.speech || "en-US";
+  const audioText = buildAudioText(result.name, cards);
+
+  React.useEffect(() => () => stopGuideAudio(), []);
+
+  return (
+    <div>
+      <div style={{ padding: "0 18px" }}>
+        <div style={{ position: "relative", borderRadius: 24, overflow: "hidden" }}>
+          {capturedImage ? (
+            <img src={`data:image/jpeg;base64,${capturedImage}`} alt={result.name}
+              style={{ width: "100%", aspectRatio: "4/3", objectFit: "cover", display: "block" }}/>
+          ) : (
+            <div style={{ aspectRatio: "4/3", background: "var(--sea-deep)" }}/>
+          )}
+          <div style={{
+            position: "absolute", inset: 0,
+            background: "linear-gradient(180deg, rgba(13,28,44,0.1) 0%, rgba(13,28,44,0.85) 100%)",
+          }}/>
+          <div style={{
+            position: "absolute", top: 14, left: 14,
+            background: "rgba(245,184,30,0.95)", color: "var(--sea-deep)",
+            padding: "5px 12px 5px 8px", borderRadius: 999,
+            fontSize: 11, fontWeight: 700,
+            display: "inline-flex", alignItems: "center", gap: 6,
+          }}>
+            <Icon.Check style={{ width: 12, height: 12 }}/>
+            Identified · {Math.round((result.confidence ?? 0.9) * 100)}%
+          </div>
+          <div style={{
+            position: "absolute", top: 14, right: 14,
+            background: "rgba(13,28,44,0.6)", backdropFilter: "blur(6px)", color: "#fff",
+            padding: "5px 10px", borderRadius: 999,
+            fontSize: 11, fontFamily: "JetBrains Mono, monospace", letterSpacing: 1,
+          }}>
+            {lang.toUpperCase()}
+          </div>
+          <div style={{ position: "absolute", left: 18, right: 18, bottom: 16, color: "#fff" }}>
+            <div className="serif" style={{ fontSize: 28, lineHeight: 1.05, textWrap: "balance" }}>
+              {result.name}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding: "20px 18px 0", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="fade-up" style={{
+          background: "var(--sea-deep)", color: "#fff", borderRadius: 20,
+          padding: "14px", display: "grid", gap: 10,
+          boxShadow: "0 12px 30px -18px rgba(13,28,44,0.45)",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+            <div>
+              <div className="tag" style={{ color: "rgba(255,255,255,0.68)" }}>Audio guide</div>
+              <div style={{ fontWeight: 750, marginTop: 2 }}>Listen instead of reading</div>
+            </div>
+            <div style={{ width: 38, height: 38, borderRadius: 999, display: "grid", placeItems: "center", background: "rgba(255,255,255,0.12)" }}>
+              {isSpeaking ? "▮▮" : "▶"}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => {
+              const ok = speakGuideText(audioText, speechLang, () => setIsSpeaking(false));
+              if (!ok) { setAudioMessage("Audio not supported in this browser."); }
+              else { setAudioMessage(""); setIsSpeaking(true); }
+            }} style={{
+              flex: 1, border: 0, borderRadius: 14, padding: "12px",
+              background: "var(--sun)", color: "var(--sea-deep)",
+              fontFamily: "inherit", fontWeight: 800, cursor: "pointer",
+            }}>
+              {isSpeaking ? "Restart audio" : "Play audio"}
+            </button>
+            <button onClick={() => { stopGuideAudio(); setIsSpeaking(false); }} disabled={!isSpeaking} style={{
+              border: "1px solid rgba(255,255,255,0.18)", borderRadius: 14, padding: "12px 14px",
+              background: "rgba(255,255,255,0.1)", color: "#fff",
+              fontFamily: "inherit", fontWeight: 700,
+              cursor: isSpeaking ? "pointer" : "not-allowed", opacity: isSpeaking ? 1 : 0.55,
+            }}>Stop</button>
+          </div>
+          {audioMessage && <div style={{ fontSize: 12, color: "var(--sun-soft)" }}>{audioMessage}</div>}
+        </div>
+
+        {cards.map((c, i) => <InfoCard key={i} c={c} delay={i * 90} num={i + 1}/>)}
+      </div>
+
+      <div style={{ padding: "22px 18px 32px", display: "flex", gap: 10 }}>
+        <button onClick={onLang} style={{
+          flex: 0.4, padding: "14px", border: "1px solid var(--line)", background: "#fff",
+          borderRadius: 16, fontWeight: 600, fontSize: 14, color: "var(--ink)",
+          cursor: "pointer", fontFamily: "inherit",
+          display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+        }}>
+          <Icon.Globe style={{ width: 16, height: 16 }}/>
+        </button>
+        <button onClick={onRetake} style={{
+          flex: 1, padding: "14px", border: 0, background: "var(--sea-deep)", color: "#fff",
+          borderRadius: 16, fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit",
+          display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+        }}>
+          <Icon.Camera style={{ width: 16, height: 16 }}/> {copy.retake}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Step 4b: demo result — 3 cards ─────────────────────────────────── */
 
 function ResultView({ lang, copy, result, onRetake, onLang }) {
   const landmarkId = Object.entries(RESULTS).find(([, value]) => value === result)?.[0];
