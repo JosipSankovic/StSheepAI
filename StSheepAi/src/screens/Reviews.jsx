@@ -1,4 +1,6 @@
 import React from 'react'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 import { Icon } from '../icons.jsx'
 import { Card, ScreenHeader } from '../ui.jsx'
 
@@ -15,6 +17,7 @@ const PLACES = [
     type: "Konoba · Seafood",
     where: "Veli Varoš · 0.4 km",
     pos: { x: 30, y: 62 },
+    coords: [43.5095, 16.4344],
     price: "€€",
     trust: 87, risk: "low",
     reviews: 1842, rating: 4.6,
@@ -33,6 +36,7 @@ const PLACES = [
     type: "Restaurant · Tourist",
     where: "Peristyle · 20 m",
     pos: { x: 58, y: 42 },
+    coords: [43.5081, 16.4402],
     price: "€€€",
     trust: 38, risk: "high",
     reviews: 2103, rating: 3.2,
@@ -51,6 +55,7 @@ const PLACES = [
     type: "Konoba · Dalmatian",
     where: "Matejuška · 0.5 km",
     pos: { x: 34, y: 64 },
+    coords: [43.5099, 16.4335],
     price: "€",
     trust: 79, risk: "low",
     reviews: 3104, rating: 4.4,
@@ -69,6 +74,7 @@ const PLACES = [
     type: "Bistro · Modern Dalmatian",
     where: "Domaldova · 0.2 km",
     pos: { x: 48, y: 48 },
+    coords: [43.5092, 16.4388],
     price: "€€€",
     trust: 74, risk: "low",
     reviews: 2210, rating: 4.5,
@@ -87,6 +93,7 @@ const PLACES = [
     type: "Wine bar · Tapas",
     where: "Poljana Tina Ujevića",
     pos: { x: 54, y: 36 },
+    coords: [43.5102, 16.4372],
     price: "€€",
     trust: 82, risk: "low",
     reviews: 1404, rating: 4.7,
@@ -347,12 +354,18 @@ function TrustDial({ value, risk }) {
 
 function MapView({ places, onOpen }) {
   const [hover, setHover] = React.useState(places[0]?.id);
-  const active = places.find(p => p.id === hover) || places[0];
+  const activeId = places.some(p => p.id === hover) ? hover : places[0]?.id;
+  const active = places.find(p => p.id === activeId) || places[0];
 
   return (
     <div style={{ padding: "0 18px 24px" }}>
       <div style={{ position: "relative", borderRadius: 22, overflow: "hidden", border: "1px solid var(--line)" }}>
-        <SplitMiniMap places={places} activeId={hover} onPick={setHover}/>
+        <SplitLeafletMap
+          places={places}
+          activeId={activeId}
+          onPick={setHover}
+          onOpen={onOpen}
+        />
 
         {/* Bottom info card */}
         {active && (
@@ -422,94 +435,110 @@ function MapView({ places, onOpen }) {
   );
 }
 
-function SplitMiniMap({ places, activeId, onPick }) {
-  const [t, setT] = React.useState(0);
+function SplitLeafletMap({ places, activeId, onPick, onOpen }) {
+  const mapEl = React.useRef(null)
+  const mapRef = React.useRef(null)
+  const markersRef = React.useRef({})
+
   React.useEffect(() => {
-    let raf, s;
-    const tick = n => { s ??= n; setT(((n - s) / 1800) % 1); raf = requestAnimationFrame(tick); };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-  const pulseR = 14 + t * 16;
-  const pulseO = 0.5 * (1 - t);
+    if (!mapEl.current || mapRef.current) return
 
-  const W = 400, H = 460;
-  const toX = p => p / 100 * W;
-  const toY = p => p / 100 * H;
+    const map = L.map(mapEl.current, {
+      center: [43.5089, 16.4380],
+      zoom: 16,
+      zoomControl: false,
+      attributionControl: false,
+      scrollWheelZoom: false,
+      tap: true,
+    })
 
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ display: "block", width: "100%", background: "#efe3c8" }}>
-      <defs>
-        <pattern id="dotgrid2" width="14" height="14" patternUnits="userSpaceOnUse">
-          <circle cx="1" cy="1" r="0.8" fill="rgba(140,130,110,0.4)"/>
-        </pattern>
-        <linearGradient id="seaG2" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#9ec9d6"/>
-          <stop offset="1" stopColor="#6ea6b6"/>
-        </linearGradient>
-      </defs>
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap',
+    }).addTo(map)
 
-      <rect width={W} height={H} fill="#efe3c8"/>
-      <rect width={W} height={H} fill="url(#dotgrid2)" opacity="0.5"/>
+    L.control.zoom({ position: 'bottomright' }).addTo(map)
+    L.control.attribution({ prefix: false, position: 'bottomleft' }).addTo(map)
 
-      {/* Marjan */}
-      <path d="M0 40 L160 30 L130 120 L60 170 L0 150 Z" fill="#c5d3a4"/>
-      <text x="60" y="100" fontFamily="JetBrains Mono" fontSize="9" letterSpacing="2" fill="#5e6b32">MARJAN</text>
+    mapRef.current = map
 
-      {/* Sea */}
-      <path d={`M0 ${H*0.7} Q${W*0.3} ${H*0.66} ${W*0.6} ${H*0.7} T${W} ${H*0.72} L${W} ${H} L0 ${H} Z`} fill="url(#seaG2)"/>
-      <g stroke="#5b94a5" strokeWidth="0.8" fill="none" opacity="0.5">
-        {[H*0.76, H*0.82, H*0.88].map((y,i)=>(
-          <path key={i} d={`M0 ${y} q 30 -6 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0`}/>
-        ))}
-      </g>
+    return () => {
+      map.remove()
+      mapRef.current = null
+      markersRef.current = {}
+    }
+  }, [])
 
-      {/* Streets */}
-      <g stroke="#fff" strokeWidth="5" fill="none" strokeLinecap="round">
-        <path d="M80 220 L380 230"/>
-        <path d="M210 60 L210 260"/>
-        <path d="M80 280 L380 290"/>
-      </g>
-      <g stroke="#e3d6b2" strokeWidth="3" fill="none" strokeLinecap="round">
-        <path d="M120 130 L220 230"/>
-        <path d="M260 130 L260 280"/>
-        <path d="M310 200 L380 200"/>
-      </g>
+  React.useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
 
-      {/* Riva ribbon */}
-      <path d="M90 305 L370 308" stroke="#d96a3c" strokeWidth="3" strokeLinecap="round" opacity="0.7"/>
-      <text x="220" y="328" fontFamily="JetBrains Mono" fontSize="9" letterSpacing="2" fill="#a06037" textAnchor="middle">RIVA</text>
+    Object.values(markersRef.current).forEach(marker => marker.remove())
+    markersRef.current = {}
 
-      {/* Palace block */}
-      <g>
-        <rect x="190" y="190" width="100" height="80" rx="4" fill="#e6dcc6" stroke="#a99a72" strokeWidth="1.5"/>
-        <rect x="200" y="200" width="22" height="22" fill="#cfb87a" opacity="0.8"/>
-        <rect x="230" y="200" width="28" height="22" fill="#cfb87a" opacity="0.8"/>
-        <rect x="200" y="230" width="38" height="32" fill="#cfb87a" opacity="0.8"/>
-        <rect x="245" y="230" width="38" height="32" fill="#cfb87a" opacity="0.8"/>
-        <rect x="246" y="205" width="10" height="20" fill="#d96a3c"/>
-      </g>
+    const bounds = []
 
-      {/* Pins */}
-      {places.map(p => {
-        const isActive = p.id === activeId;
-        const color = p.risk === "low" ? "#2a8a4a" : p.risk === "high" ? "#b03a2e" : "#c98410";
-        return (
-          <g key={p.id} style={{ cursor: "pointer" }} onClick={() => onPick(p.id)}>
-            {isActive && (
-              <circle cx={toX(p.pos.x)} cy={toY(p.pos.y)} r={pulseR} fill={color} opacity={pulseO}/>
-            )}
-            <g transform={`translate(${toX(p.pos.x)-13} ${toY(p.pos.y)-32})`}>
-              <ellipse cx="13" cy="32" rx="7" ry="2" fill="rgba(0,0,0,0.2)"/>
-              <path d="M13 0 C5 0 0 6 0 14 c0 10 13 20 13 20 s13-10 13-20 c0-8-5-14-13-14z"
-                    fill={isActive ? color : "#fff"} stroke={color} strokeWidth="2.2"/>
-              <circle cx="13" cy="14" r="4" fill={isActive ? "#fff" : color}/>
-            </g>
-          </g>
-        );
-      })}
-    </svg>
-  );
+    places.forEach(place => {
+      if (!place.coords) return
+
+      const isActive = place.id === activeId
+      const marker = L.marker(place.coords, {
+        icon: createTrustIcon(place, isActive),
+        riseOnHover: true,
+      })
+        .addTo(map)
+        .on('click', () => {
+          onPick(place.id)
+        })
+        .on('dblclick', () => {
+          onOpen(place.id)
+        })
+        .bindTooltip(`${place.name} · ${place.trust}/100`, {
+          direction: 'top',
+          offset: [0, -18],
+          opacity: 0.94,
+        })
+
+      markersRef.current[place.id] = marker
+      bounds.push(place.coords)
+    })
+
+    if (bounds.length > 1) {
+      map.fitBounds(bounds, { padding: [42, 42], maxZoom: 17 })
+    } else if (bounds.length === 1) {
+      map.setView(bounds[0], 17)
+    }
+
+    requestAnimationFrame(() => map.invalidateSize())
+  }, [places, activeId, onPick, onOpen])
+
+  React.useEffect(() => {
+    const marker = markersRef.current[activeId]
+    if (!marker || !mapRef.current) return
+
+    marker.setIcon(createTrustIcon(places.find(p => p.id === activeId), true))
+    mapRef.current.panTo(marker.getLatLng(), { animate: true, duration: 0.45 })
+  }, [activeId, places])
+
+  return <div ref={mapEl} className="split-leaflet-map" aria-label="Interactive Split restaurant map" />
+}
+
+function createTrustIcon(place, isActive) {
+  const risk = place?.risk ?? 'low'
+  const color = risk === 'low' ? '#2a8a4a' : risk === 'high' ? '#b03a2e' : '#c98410'
+  const size = isActive ? 42 : 34
+  const score = place?.trust ?? ''
+
+  return L.divIcon({
+    className: 'trust-map-marker-shell',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    html: `
+      <button class="trust-map-marker ${isActive ? 'is-active' : ''}" style="--pin:${color}; width:${size}px; height:${size}px" type="button">
+        <span>${score}</span>
+      </button>
+    `,
+  })
 }
 
 /* ── Detail sheet ───────────────────────────────────────────────────── */
