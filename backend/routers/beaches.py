@@ -5,8 +5,9 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
 from config import settings
-from models.beach import BeachDetail, BeachSummary, CapturedImage
+from models.beach import BeachAnalysis, BeachDetail, BeachSummary, CapturedImage
 from services.beach_service import get_all_beaches, get_beach_by_id
+from services.analysis_service import analyze_image
 from scheduler.jobs import capture_all_beaches
 
 router = APIRouter()
@@ -30,7 +31,7 @@ def get_beach(beach_id: str):
 
 @router.get("/{beach_id}/latest-image")
 def latest_image(beach_id: str):
-    get_beach_by_id(beach_id)  # 404 if unknown
+    get_beach_by_id(beach_id)
     beach_dir = Path(settings.images_dir) / beach_id
     jpegs = sorted(beach_dir.glob("*.jpg")) if beach_dir.exists() else []
     if not jpegs:
@@ -40,19 +41,55 @@ def latest_image(beach_id: str):
 
 @router.get("/{beach_id}/images", response_model=list[CapturedImage])
 def list_images(beach_id: str):
-    get_beach_by_id(beach_id)  # 404 if unknown
+    get_beach_by_id(beach_id)
     beach_dir = Path(settings.images_dir) / beach_id
     jpegs = sorted(beach_dir.glob("*.jpg"), reverse=True) if beach_dir.exists() else []
     result = []
     for path in jpegs:
-        stem = path.stem  # e.g. "2026-05-16_14-30"
+        stem = path.stem
         try:
             ts = datetime.strptime(stem, "%Y-%m-%d_%H-%M").isoformat()
         except ValueError:
             ts = stem
+        analysis = None
+        sidecar = path.with_suffix(".json")
+        if sidecar.exists():
+            analysis = BeachAnalysis.model_validate_json(sidecar.read_text())
         result.append(CapturedImage(
             filename=path.name,
             timestamp=ts,
             url=f"/static/images/{beach_id}/{path.name}",
+            analysis=analysis,
         ))
+    return result
+
+
+@router.get("/{beach_id}/latest-analysis", response_model=BeachAnalysis)
+def latest_analysis(beach_id: str):
+    get_beach_by_id(beach_id)
+    beach_dir = Path(settings.images_dir) / beach_id
+    sidecars = sorted(beach_dir.glob("*.json")) if beach_dir.exists() else []
+    if not sidecars:
+        raise HTTPException(status_code=404, detail="No analysis available yet for this beach")
+    return BeachAnalysis.model_validate_json(sidecars[-1].read_text())
+
+
+@router.get("/{beach_id}/analyses", response_model=list[BeachAnalysis])
+def list_analyses(beach_id: str):
+    get_beach_by_id(beach_id)
+    beach_dir = Path(settings.images_dir) / beach_id
+    sidecars = sorted(beach_dir.glob("*.json"), reverse=True) if beach_dir.exists() else []
+    return [BeachAnalysis.model_validate_json(p.read_text()) for p in sidecars]
+
+
+@router.post("/{beach_id}/analyze", response_model=BeachAnalysis)
+def trigger_analysis(beach_id: str):
+    beach = get_beach_by_id(beach_id)
+    beach_dir = Path(settings.images_dir) / beach_id
+    jpegs = sorted(beach_dir.glob("*.jpg")) if beach_dir.exists() else []
+    if not jpegs:
+        raise HTTPException(status_code=404, detail="No images captured yet for this beach")
+    result = analyze_image(jpegs[-1], beach_name=beach["name"])
+    if result is None:
+        raise HTTPException(status_code=503, detail="Analysis failed — check OPENAI_API_KEY and logs")
     return result
