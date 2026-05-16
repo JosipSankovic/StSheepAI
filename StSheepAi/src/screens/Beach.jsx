@@ -61,14 +61,21 @@ const BEACHES = [
     distance: "2.6 km east",
     walk: "8 min bus",
     tone: "terra",
-    crowd: 65,
-    cap: 2000, here: 1300,
+    crowd: 10,
+    cap: 2000, here: 0,
     water: 23,
-    weather: "Sunny · 28°C",
-    wait: "Busy near clubs, room at edges",
+    weather: "Cloudy · light wind",
+    wait: "Plenty of space",
     note: "Big, loud, lots of facilities. Pick the east end for calm.",
     parking: "Tight",
     stream: "https://cdn-006.whatsupcams.com/hls/hr_buildznjan01.m3u8",
+    vlm: {
+      timestamp: "2026-05-16T12:49:00Z",
+      scene_type: "beach",
+      weather: { condition: "cloudy", visibility: "good", wind_estimate: "light", precipitation_visible: false },
+      people: { estimated_count: 0, estimated_range: { min: 0, max: 5 }, crowd_level: "low", crowd_score: 1 },
+      notes: ["The beach area is mostly empty.", "Cloudy weather with no visible precipitation."],
+    },
   },
 ];
 
@@ -275,7 +282,7 @@ function BeachCard({ beach }) {
 
         {/* tip */}
         <div style={{
-          marginTop: 14, marginBottom: 18,
+          marginTop: 14,
           padding: "12px 14px",
           background: "var(--paper)",
           borderRadius: 14,
@@ -286,6 +293,86 @@ function BeachCard({ beach }) {
             {beach.note}
           </div>
         </div>
+
+        {/* VLM analysis */}
+        {beach.vlm && <VlmBlock vlm={beach.vlm}/>}
+      </div>
+    </div>
+  );
+}
+
+function VlmBlock({ vlm }) {
+  const weatherIcon = {
+    sunny: "☀️", partly_cloudy: "⛅", cloudy: "☁️", rainy: "🌧️", foggy: "🌫️",
+  }[vlm.weather.condition] || "🌤️";
+
+  const ts = new Date(vlm.timestamp);
+  const timeStr = ts.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+  return (
+    <div style={{
+      marginTop: 14, marginBottom: 18,
+      border: "1px solid var(--line)",
+      borderRadius: 16,
+      overflow: "hidden",
+      background: "#fff",
+    }}>
+      {/* header */}
+      <div style={{
+        padding: "10px 14px",
+        borderBottom: "1px solid var(--line)",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
+        <div className="tag">AI camera analysis</div>
+        <div className="mono" style={{ fontSize: 10, color: "var(--ink-mute)" }}>{timeStr}</div>
+      </div>
+
+      {/* chips row */}
+      <div style={{
+        display: "flex", gap: 8, flexWrap: "wrap",
+        padding: "12px 14px",
+        borderBottom: "1px solid var(--line)",
+      }}>
+        <Chip label="Scene" value={vlm.scene_type} icon="📍"/>
+        <Chip label="Weather" value={`${weatherIcon} ${vlm.weather.condition}`} icon={null}/>
+        <Chip label="Wind" value={vlm.weather.wind_estimate} icon="💨"/>
+        <Chip
+          label="People"
+          value={vlm.people.estimated_count === 0
+            ? `~0–${vlm.people.estimated_range.max}`
+            : `~${vlm.people.estimated_count}`}
+          icon="👥"
+        />
+      </div>
+
+      {/* notes */}
+      <div style={{ padding: "10px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
+        {vlm.notes.map((n, i) => (
+          <div key={i} style={{
+            fontSize: 12, color: "var(--ink-soft)", lineHeight: 1.4,
+            display: "flex", gap: 8, alignItems: "flex-start",
+          }}>
+            <span style={{ color: "var(--ink-mute)", flexShrink: 0 }}>—</span>
+            {n}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Chip({ label, value, icon }) {
+  return (
+    <div style={{
+      display: "inline-flex", flexDirection: "column", gap: 2,
+      padding: "6px 10px",
+      background: "var(--paper)",
+      border: "1px solid var(--line)",
+      borderRadius: 10,
+    }}>
+      <div className="tag" style={{ fontSize: 9 }}>{label}</div>
+      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)", textTransform: "capitalize" }}>
+        {icon && <span style={{ marginRight: 4 }}>{icon}</span>}{value}
       </div>
     </div>
   );
