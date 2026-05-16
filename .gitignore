@@ -1,5 +1,6 @@
 *.mp4
 *.jpg
+<<<<<<< HEAD
 *thoughts/shared/plans
 *tourist_review_intelligence_codex_plan.md
 *split_tourist_assistant_combined_codex_plan.md
@@ -13,3 +14,11 @@ thoughts/shared/**/*.md
 .env
 .env.*
 !.env.example
+=======
+*.md
+!/docs
+backend/.venv/
+backend/.env
+*.pyc
+backend/images
+>>>>>>> cca24bc (add to gitignore venv and docs)
