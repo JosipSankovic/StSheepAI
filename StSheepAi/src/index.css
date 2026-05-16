@@ -125,7 +125,7 @@ input, textarea { font-family: inherit; }
 
 .scroll {
   position: absolute;
-  inset: 44px 0 86px;
+  inset: 106px 0 86px;
   overflow-y: auto;
   overflow-x: hidden;
   scroll-behavior: smooth;

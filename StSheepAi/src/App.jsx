@@ -31,6 +31,20 @@ function App() {
         <div className="notch" />
         <StatusBar />
 
+        <div className="brandbar" aria-label="Split Tura">
+          <span className="brand-mark" aria-hidden="true">
+            <svg width="36" height="36" viewBox="0 0 32 32" fill="none">
+              <path d="M9 14 a6 6 0 0 1 6 -6" stroke="#f5b81e" strokeWidth="1.8" strokeLinecap="round"/>
+              <path d="M16 5 L18 8 L18 21 L14 21 L14 8 Z" stroke="#0d3b66" strokeWidth="1.6" strokeLinejoin="round"/>
+              <path d="M7 21 L11 17 L14 21 M18 21 L22 18 L25 21" stroke="#0d3b66" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round"/>
+              <path d="M5 25 q 3 -1.6 6 0 t 6 0 t 6 0 t 6 0" stroke="#1d6fb8" strokeWidth="1.6" strokeLinecap="round"/>
+              <path d="M7 28 q 3 -1.4 5 0 t 5 0 t 5 0" stroke="#4aa3df" strokeWidth="1.2" strokeLinecap="round"/>
+            </svg>
+          </span>
+          <span className="brand-word">Split Tura</span>
+          <span className="brand-tag">Your Split · Your Guide</span>
+        </div>
+
         <div ref={scrollRef} className="scroll">
           <div
             data-screen-label={

@@ -1,3 +1,36 @@
+.brandbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px 10px;
+}
+
+.brand-mark {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-word {
+  font-family: "Dancing Script", "Instrument Serif", cursive;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--sea-deep);
+  letter-spacing: 0.2px;
+  line-height: 1;
+}
+
+.brand-tag {
+  margin-left: auto;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--ink-mute);
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+}
+
 .statusbar-icons {
   display: inline-flex;
   gap: 6px;
