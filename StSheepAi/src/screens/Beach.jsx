@@ -1,4 +1,5 @@
 import React from 'react'
+import Hls from 'hls.js'
 import { Icon } from '../icons.jsx'
 import { ScreenHeader } from '../ui.jsx'
 
@@ -21,6 +22,7 @@ const BEACHES = [
     wait: "20+ min for chairs",
     note: "Famous for picigin — the locals' running splash-ball game.",
     parking: "Full",
+    stream: "https://cdn-004.whatsupcams.com/hls/hr_splitbacvice01.m3u8",
   },
   {
     id: "kasjuni",
@@ -66,6 +68,7 @@ const BEACHES = [
     wait: "Busy near clubs, room at edges",
     note: "Big, loud, lots of facilities. Pick the east end for calm.",
     parking: "Tight",
+    stream: "https://cdn-006.whatsupcams.com/hls/hr_buildznjan01.m3u8",
   },
 ];
 
@@ -190,8 +193,11 @@ function BeachCard({ beach }) {
       overflow: "hidden",
       boxShadow: "0 12px 30px -22px rgba(13,28,44,0.3)",
     }}>
-      {/* Animated beach top */}
-      <BeachScene crowd={beach.crowd} tone={beach.tone}/>
+      {beach.stream ? (
+        <StreamPlayer src={beach.stream} height={180}/>
+      ) : (
+        <BeachScene crowd={beach.crowd} tone={beach.tone}/>
+      )}
 
       <div style={{ padding: "18px 18px 4px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
@@ -484,6 +490,80 @@ function BeachScene({ crowd, tone, mini }) {
       }}>
         <span style={{ width: 5, height: 5, borderRadius: 999, background: status.color }}/>
         {status.label.toUpperCase()}
+      </div>
+    </div>
+  );
+}
+
+/* ── Live stream player ─────────────────────────────────────────────── */
+
+function StreamPlayer({ src, height = 180 }) {
+  const videoRef = React.useRef(null);
+  const [error, setError] = React.useState(false);
+
+  React.useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    setError(false);
+
+    if (Hls.isSupported()) {
+      const hls = new Hls({ lowLatencyMode: true });
+      hls.loadSource(src);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.ERROR, (_, data) => {
+        if (data.fatal) setError(true);
+      });
+      return () => hls.destroy();
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = src;
+      video.onerror = () => setError(true);
+    } else {
+      setError(true);
+    }
+  }, [src]);
+
+  if (error) {
+    return (
+      <div style={{
+        height, background: "#1a2a3a",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center", gap: 6,
+      }}>
+        <Icon.Refresh style={{ color: "rgba(255,255,255,0.3)", width: 24, height: 24 }}/>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontFamily: "JetBrains Mono, monospace", letterSpacing: 1 }}>
+          STREAM UNAVAILABLE
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ position: "relative", height, background: "#000", overflow: "hidden" }}>
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        playsInline
+        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+      />
+      <div style={{
+        position: "absolute", top: 10, right: 10,
+        background: "rgba(13,28,44,0.75)",
+        backdropFilter: "blur(6px)",
+        color: "#fff",
+        borderRadius: 999,
+        padding: "5px 10px",
+        fontSize: 10,
+        fontFamily: "JetBrains Mono, monospace",
+        letterSpacing: 1,
+        display: "inline-flex", alignItems: "center", gap: 6,
+      }}>
+        <span style={{
+          width: 6, height: 6, borderRadius: 999, background: "#2a8a4a",
+          boxShadow: "0 0 0 3px rgba(42,138,74,0.3)",
+          animation: "pulseDot 1.8s ease-in-out infinite",
+        }}/>
+        LIVE
       </div>
     </div>
   );
