@@ -23,6 +23,8 @@ const BEACHES = [
     wait: "Plenty of space",
     note: "Famous for picigin — the locals' running splash-ball game.",
     parking: "Full",
+    photo: "https://commons.wikimedia.org/wiki/Special:FilePath/Bacvice.jpg?width=700",
+    photoCredit: "Airin / Wikimedia Commons",
     stream: "https://cdn-004.whatsupcams.com/hls/hr_splitbacvice01.m3u8",
     vlm: {
       timestamp: "2026-05-16T12:49:00Z",
@@ -47,6 +49,8 @@ const BEACHES = [
     wait: "Plenty of space",
     note: "South of Marjan — the prettiest cove inside the city.",
     parking: "Some spots",
+    photo: "https://commons.wikimedia.org/wiki/Special:FilePath/Beach%20Kasjuni%2C%20Split.jpg?width=700",
+    photoCredit: "Wikimedia Commons",
   },
   {
     id: "bene",
@@ -63,6 +67,8 @@ const BEACHES = [
     wait: "Empty",
     note: "Hidden on Marjan's back side — locals know, tourists don't.",
     parking: "Easy",
+    photo: "https://commons.wikimedia.org/wiki/Special:FilePath/Sunset%20on%20beach%20Bene.jpg?width=700",
+    photoCredit: "Wikimedia Commons",
   },
   {
     id: "znjan",
@@ -79,6 +85,8 @@ const BEACHES = [
     wait: "Plenty of space",
     note: "Big, loud, lots of facilities. Pick the east end for calm.",
     parking: "Tight",
+    photo: "https://commons.wikimedia.org/wiki/Special:FilePath/Croatia%20Split%20beach%20Znjan%20panorama.jpg?width=900",
+    photoCredit: "Klapi / Wikimedia Commons",
     stream: "https://cdn-006.whatsupcams.com/hls/hr_buildznjan01.m3u8",
     vlm: {
       timestamp: "2026-05-16T12:49:00Z",
@@ -98,6 +106,8 @@ export default function Beach() {
     [seaTemperatures],
   );
   const open = beaches.find(b => b.id === openId) || beaches[0];
+  const openWater = getWaterTemperature(open);
+  const syncTime = open.vlm?.timestamp ? formatMarineTime(open.vlm.timestamp) : "demo";
 
   return (
     <div>
@@ -110,21 +120,20 @@ export default function Beach() {
       {/* Live banner */}
       <div style={{ padding: "0 18px 14px" }}>
         <div style={{
-          display: "flex", alignItems: "center", gap: 10,
-          padding: "10px 14px",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 8,
+          padding: 10,
           background: "rgba(29,111,184,0.08)",
           border: "1px solid rgba(29,111,184,0.18)",
-          borderRadius: 14,
+          borderRadius: 18,
           fontSize: 13,
           color: "var(--sea-deep)",
         }}>
-          <span style={{
-            width: 8, height: 8, borderRadius: 999, background: "#2a8a4a",
-            boxShadow: "0 0 0 4px rgba(42,138,74,0.2)",
-            animation: "pulseDot 1.8s ease-in-out infinite",
-          }}/>
-          <div style={{ flex: 1, fontWeight: 600 }}>Live · last sync 2 min ago</div>
-          <Icon.Refresh style={{ color: "var(--ink-mute)" }}/>
+          <LiveDataChip label="Webcam AI" value={open.stream ? "live" : "demo"} active={Boolean(open.stream)}/>
+          <LiveDataChip label="Sea temp" value={openWater.isLive ? "Open-Meteo" : "demo"} active={openWater.isLive}/>
+          <LiveDataChip label="Crowd estimate" value={open.vlm ? "AI vision" : "simulated"} active={Boolean(open.vlm)}/>
+          <LiveDataChip label="Last updated" value={syncTime} active={Boolean(open.vlm) || openWater.isLive}/>
         </div>
         <style>{`@keyframes pulseDot { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }`}</style>
       </div>
@@ -272,6 +281,7 @@ function formatMarineTime(time) {
 function BeachCard({ beach }) {
   const status = crowdInfo(beach.crowd);
   const water = getWaterTemperature(beach);
+  const decision = beachDecision(beach, water);
 
   // animated number
   const [pct, setPct] = React.useState(0);
@@ -322,6 +332,36 @@ function BeachCard({ beach }) {
           }}>
             <span style={{ width: 7, height: 7, borderRadius: 999, background: status.color }}/>
             {status.label.toUpperCase()}
+          </div>
+        </div>
+
+        <div style={{
+          marginTop: 16,
+          padding: "16px 15px",
+          borderRadius: 18,
+          background: decision.bg,
+          border: `1px solid ${decision.border}`,
+          display: "grid",
+          gap: 9,
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <div className="tag" style={{ color: decision.color }}>Beach decision</div>
+            <span className="mono" style={{
+              fontSize: 10,
+              fontWeight: 900,
+              color: decision.color,
+              background: "rgba(255,255,255,0.64)",
+              padding: "5px 8px",
+              borderRadius: 999,
+            }}>
+              {decision.confidence}
+            </span>
+          </div>
+          <div className="serif" style={{ fontSize: 28, lineHeight: 1.05, color: "var(--ink)" }}>
+            {decision.title}
+          </div>
+          <div style={{ fontSize: 13, color: "var(--ink-soft)", lineHeight: 1.4 }}>
+            {decision.reason}
           </div>
         </div>
 
@@ -476,6 +516,45 @@ function Chip({ label, value, icon }) {
   );
 }
 
+function LiveDataChip({ label, value, active }) {
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      minWidth: 0,
+      padding: "8px 9px",
+      borderRadius: 12,
+      background: "rgba(255,255,255,0.74)",
+      border: "1px solid rgba(217,205,177,0.8)",
+    }}>
+      <span style={{
+        width: 7,
+        height: 7,
+        borderRadius: 999,
+        background: active ? "var(--good)" : "var(--warn)",
+        boxShadow: active ? "0 0 0 4px rgba(42,138,74,0.14)" : "none",
+        animation: active ? "pulseDot 1.8s ease-in-out infinite" : "none",
+        flexShrink: 0,
+      }}/>
+      <div style={{ minWidth: 0 }}>
+        <div className="tag" style={{ fontSize: 8 }}>{label}</div>
+        <div style={{
+          fontSize: 11,
+          fontWeight: 800,
+          color: active ? "var(--sea-deep)" : "var(--warn)",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          textTransform: "capitalize",
+        }}>
+          {value}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MetaCell({ k, v, ic, last }) {
   return (
     <div style={{
@@ -500,10 +579,47 @@ function crowdHeadline(c) {
   return "Packed. Try a different beach today.";
 }
 
+function beachDecision(beach, water) {
+  const temp = water.isLive ? water.label : `${beach.water}°C`;
+  const isCool = parseFloat(temp) < 20;
+
+  if (beach.crowd >= 80) {
+    return {
+      title: "Avoid now",
+      reason: `${beach.name} is packed. Try Kašjuni or Bene, or wait until after 6 pm.`,
+      color: "var(--bad)",
+      bg: "rgba(176,58,46,0.10)",
+      border: "rgba(176,58,46,0.18)",
+      confidence: "HIGH",
+    };
+  }
+
+  if (beach.crowd >= 55 || isCool) {
+    return {
+      title: "Wait or choose calmer",
+      reason: `${beach.name} is usable, but ${beach.crowd >= 55 ? "it is getting busy" : `the sea is cooler at ${temp}`}. Check Bene if you want quiet.`,
+      color: "var(--warn)",
+      bg: "rgba(201,132,16,0.12)",
+      border: "rgba(201,132,16,0.18)",
+      confidence: "MED",
+    };
+  }
+
+  return {
+    title: "Go now",
+    reason: `${beach.name} looks comfortable: ${crowdInfo(beach.crowd).label.toLowerCase()}, ${temp} sea temperature, and ${beach.walk.toLowerCase()}.`,
+    color: "var(--good)",
+    bg: "rgba(42,138,74,0.10)",
+    border: "rgba(42,138,74,0.18)",
+    confidence: "HIGH",
+  };
+}
+
 /* ── Mini beach card ────────────────────────────────────────────────── */
 
 function MiniBeach({ b, onClick, delay = 0 }) {
   const status = crowdInfo(b.crowd);
+  const [photoFailed, setPhotoFailed] = React.useState(false);
   return (
     <button onClick={onClick} className="fade-up" style={{
       animationDelay: `${delay}ms`,
@@ -516,7 +632,49 @@ function MiniBeach({ b, onClick, delay = 0 }) {
     onTouchEnd={(e)=>e.currentTarget.style.transform = "scale(1)"}
     >
       <div style={{ position: "relative", height: 80, overflow: "hidden" }}>
-        <BeachScene crowd={b.crowd} tone={b.tone} mini/>
+        {b.photo && !photoFailed ? (
+          <>
+            <img
+              src={b.photo}
+              alt={`${b.name} beach`}
+              loading="lazy"
+              onError={() => setPhotoFailed(true)}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+                transform: "scale(1.02)",
+              }}
+            />
+            <div style={{
+              position: "absolute",
+              inset: 0,
+              background: "linear-gradient(180deg, rgba(13,28,44,0.04) 20%, rgba(13,28,44,0.55) 100%)",
+            }}/>
+            <div style={{
+              position: "absolute",
+              left: 8,
+              right: 8,
+              bottom: 7,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 6,
+              color: "#fff",
+              textShadow: "0 1px 4px rgba(0,0,0,0.55)",
+            }}>
+              <span className="mono" style={{ fontSize: 9, letterSpacing: "0.08em" }}>
+                REAL PHOTO
+              </span>
+              <span style={{ fontSize: 8, opacity: 0.8, textAlign: "right" }}>
+                {b.photoCredit}
+              </span>
+            </div>
+          </>
+        ) : (
+          <BeachScene crowd={b.crowd} tone={b.tone} mini/>
+        )}
       </div>
       <div style={{ padding: "10px 12px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
