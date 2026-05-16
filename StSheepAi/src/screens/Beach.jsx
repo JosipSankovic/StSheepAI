@@ -18,6 +18,7 @@ const BEACHES = [
     cap: 1200,
     here: 2,
     water: 22,
+    marine: { lat: 43.5039, lng: 16.4453 },
     weather: "Cloudy · calm",
     wait: "Plenty of space",
     note: "Famous for picigin — the locals' running splash-ball game.",
@@ -41,6 +42,7 @@ const BEACHES = [
     crowd: 42,
     cap: 600, here: 252,
     water: 21,
+    marine: { lat: 43.4988, lng: 16.3886 },
     weather: "Sunny · 27°C",
     wait: "Plenty of space",
     note: "South of Marjan — the prettiest cove inside the city.",
@@ -56,6 +58,7 @@ const BEACHES = [
     crowd: 18,
     cap: 400, here: 72,
     water: 21,
+    marine: { lat: 43.5088, lng: 16.3720 },
     weather: "Sunny · 26°C",
     wait: "Empty",
     note: "Hidden on Marjan's back side — locals know, tourists don't.",
@@ -71,6 +74,7 @@ const BEACHES = [
     crowd: Math.round(0 / 2000 * 100),
     cap: 2000, here: 0,
     water: 23,
+    marine: { lat: 43.5029, lng: 16.4740 },
     weather: "Cloudy · light wind",
     wait: "Plenty of space",
     note: "Big, loud, lots of facilities. Pick the east end for calm.",
@@ -88,7 +92,12 @@ const BEACHES = [
 
 export default function Beach() {
   const [openId, setOpenId] = React.useState("bacvice");
-  const open = BEACHES.find(b => b.id === openId);
+  const seaTemperatures = useSeaTemperatures(BEACHES);
+  const beaches = React.useMemo(
+    () => BEACHES.map(beach => ({ ...beach, liveWater: seaTemperatures[beach.id] })),
+    [seaTemperatures],
+  );
+  const open = beaches.find(b => b.id === openId) || beaches[0];
 
   return (
     <div>
@@ -126,7 +135,7 @@ export default function Beach() {
         display: "flex", gap: 8, overflowX: "auto",
         scrollbarWidth: "none",
       }}>
-        {BEACHES.map(b => {
+        {beaches.map(b => {
           const active = b.id === openId;
           const status = crowdInfo(b.crowd);
           return (
@@ -163,7 +172,7 @@ export default function Beach() {
         <div className="tag">Other beaches</div>
       </div>
       <div style={{ padding: "0 18px 28px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        {BEACHES.filter(b => b.id !== open.id).map((b, i) => (
+        {beaches.filter(b => b.id !== open.id).map((b, i) => (
           <MiniBeach key={b.id} b={b} onClick={() => setOpenId(b.id)} delay={i * 60}/>
         ))}
       </div>
@@ -180,10 +189,89 @@ function crowdInfo(c) {
   return        { label: "Packed",   short: "Packed",     color: "var(--bad)",  text: "var(--bad)", bg: "rgba(176,58,46,0.14)" };
 }
 
+function useSeaTemperatures(beaches) {
+  const [temperatures, setTemperatures] = React.useState({});
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function loadTemperatures() {
+      const entries = await Promise.all(
+        beaches
+          .filter(beach => beach.marine)
+          .map(async beach => {
+            try {
+              const params = new URLSearchParams({
+                latitude: String(beach.marine.lat),
+                longitude: String(beach.marine.lng),
+                current: "sea_surface_temperature",
+                timezone: "auto",
+              });
+              const response = await fetch(`https://marine-api.open-meteo.com/v1/marine?${params.toString()}`);
+
+              if (!response.ok) throw new Error("Marine API unavailable");
+
+              const data = await response.json();
+              const value = data.current?.sea_surface_temperature;
+
+              if (typeof value !== "number") throw new Error("No sea temperature returned");
+
+              return [beach.id, {
+                value: Math.round(value * 10) / 10,
+                unit: data.current_units?.sea_surface_temperature || "°C",
+                time: data.current?.time,
+                source: "Open-Meteo Marine",
+              }];
+            } catch {
+              return [beach.id, null];
+            }
+          }),
+      );
+
+      if (!cancelled) {
+        setTemperatures(Object.fromEntries(entries.filter(([, value]) => value)));
+      }
+    }
+
+    loadTemperatures();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [beaches]);
+
+  return temperatures;
+}
+
+function getWaterTemperature(beach) {
+  if (beach.liveWater) {
+    return {
+      label: `${beach.liveWater.value}${beach.liveWater.unit}`,
+      isLive: true,
+      source: beach.liveWater.source,
+      time: beach.liveWater.time,
+    };
+  }
+
+  return {
+    label: `${beach.water}°C`,
+    isLive: false,
+  };
+}
+
+function formatMarineTime(time) {
+  try {
+    return new Date(time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return time;
+  }
+}
+
 /* ── Big beach card ─────────────────────────────────────────────────── */
 
 function BeachCard({ beach }) {
   const status = crowdInfo(beach.crowd);
+  const water = getWaterTemperature(beach);
 
   // animated number
   const [pct, setPct] = React.useState(0);
@@ -281,7 +369,7 @@ function BeachCard({ beach }) {
           borderRadius: 14,
           overflow: "hidden",
         }}>
-          <MetaCell k="Water" v={`${beach.water}°C`} ic="🌊" last/>
+          <MetaCell k={water.isLive ? "Sea temp · live" : "Sea temp · demo"} v={water.label} ic="🌊" last/>
           <MetaCell k="Weather" v={beach.weather} ic="☀" last/>
         </div>
 
@@ -296,6 +384,11 @@ function BeachCard({ beach }) {
           <Icon.Info style={{ color: "var(--sea)", marginTop: 2, flexShrink: 0 }}/>
           <div style={{ fontSize: 13, color: "var(--ink-soft)", lineHeight: 1.4 }}>
             {beach.note}
+            {water.isLive && (
+              <div style={{ marginTop: 8, fontSize: 11, color: "var(--ink-mute)" }}>
+                Sea temperature from {water.source}{water.time ? ` · ${formatMarineTime(water.time)}` : ""}.
+              </div>
+            )}
           </div>
         </div>
 
@@ -433,7 +526,7 @@ function MiniBeach({ b, onClick, delay = 0 }) {
           }}/>
         </div>
         <div style={{ fontSize: 11, color: "var(--ink-mute)", marginTop: 2 }}>
-          {status.label} · {b.water}°C
+          {status.label} · {getWaterTemperature(b).label}
         </div>
       </div>
     </button>
