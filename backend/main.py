@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,10 +26,16 @@ app = FastAPI(title="Beach Monitor API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_methods=["GET"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+    ],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
+Path(settings.images_dir).mkdir(parents=True, exist_ok=True)
 app.mount("/static/images", StaticFiles(directory=settings.images_dir), name="images")
 app.include_router(beaches_router, prefix="/beaches", tags=["beaches"])
