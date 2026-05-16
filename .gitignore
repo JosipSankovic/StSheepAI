@@ -1,8 +1,21 @@
 *.mp4
 *.jpg
+*thoughts/shared/plans
+*tourist_review_intelligence_codex_plan.md
+*split_tourist_assistant_combined_codex_plan.md
+
+# Local planning/context artifacts
 *.md
-!docs/*.md
+AGENTS*.md
+thoughts/shared/**/*.md
+
+# Local secrets
+.env
+.env.*
+!.env.example
+*.md
+!/docs
 backend/.venv/
 backend/.env
-backend/images
 *.pyc
+backend/images
