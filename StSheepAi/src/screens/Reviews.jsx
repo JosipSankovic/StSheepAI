@@ -10,7 +10,11 @@ import { Card, ScreenHeader } from '../ui.jsx'
    - Tap a result/pin → detail sheet
 */
 
-const PLACES = [
+// Seed data for places backed by the /restaurants API.
+// All fields here serve as fallback if the backend is unreachable.
+// Fields overridden by the API: name, type, price, trust, risk, summary, advice,
+// pros, cons, rating, ratings.food/service/atmosphere.
+const BACKEND_PLACES_FALLBACK = [
   {
     id: "c95165f4-5ca5-4c9f-9e3d-d0f3c50fea6c",
     name: "Pizzeria Sette Sorelle",
@@ -51,6 +55,39 @@ const PLACES = [
     headline: { tone: "warn", text: "Polarized reviews — Google vs Tripadvisor gap" },
     why: ["Google volume is strong, but Tripadvisor feedback is much weaker", "Repeated complaints mention bread charges, bottled water, and tipping pressure", "Safer for casual dishes than breakfast or whole fish"],
   },
+];
+
+function backendToPlace(api, seed) {
+  const trust = Math.round(api.confidence * 100);
+  const risk = trust >= 80 ? "low" : trust <= 50 ? "high" : "medium";
+  const type = api.cuisine_type
+    .split(/[,/]/)
+    .slice(0, 3)
+    .map(s => s.trim())
+    .filter(Boolean)
+    .join(" · ");
+  return {
+    ...seed,
+    name: api.name,
+    type,
+    price: api.price_level,
+    trust,
+    risk,
+    summary: api.summary,
+    advice: api.reviewer_note,
+    pros: api.pros,
+    cons: api.cons,
+    rating: +(api.overall_rating / 2).toFixed(1),
+    ratings: {
+      ...seed.ratings,
+      food: +(api.food_rating / 2).toFixed(1),
+      service: +(api.service_rating / 2).toFixed(1),
+      atmosphere: +(api.ambiance_rating / 2).toFixed(1),
+    },
+  };
+}
+
+const PLACES = [
   {
     id: "matejuska",
     name: "Konoba Matejuška",
@@ -162,10 +199,28 @@ export default function Reviews() {
   const [scanState, setScanState] = React.useState("idle");
   const [scanMessage, setScanMessage] = React.useState("");
   const [userLocation, setUserLocation] = React.useState(null);
+  const [liveBackend, setLiveBackend] = React.useState(BACKEND_PLACES_FALLBACK);
+
+  React.useEffect(() => {
+    const seedMap = Object.fromEntries(BACKEND_PLACES_FALLBACK.map(s => [s.name, s]));
+    fetch("http://localhost:8000/restaurants")
+      .then(r => r.ok ? r.json() : null)
+      .then(items => {
+        if (!items) return;
+        const merged = items
+          .map(api => {
+            const seed = seedMap[api.name];
+            return seed ? backendToPlace(api, seed) : null;
+          })
+          .filter(Boolean);
+        if (merged.length) setLiveBackend(merged);
+      })
+      .catch(() => {});
+  }, []);
 
   const placesWithDistance = React.useMemo(() => {
     const origin = userLocation || DEMO_USER_LOCATION;
-    return PLACES.map(place => ({
+    return [...liveBackend, ...PLACES].map(place => ({
       ...place,
       distanceMeters: place.coords ? distanceMeters(origin, place.coords) : null,
       scannedNearby: Boolean(userLocation),
@@ -173,7 +228,7 @@ export default function Reviews() {
       if (!userLocation) return 0;
       return (a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity);
     });
-  }, [userLocation]);
+  }, [userLocation, liveBackend]);
 
   const filtered = q
     ? placesWithDistance.filter(p =>
