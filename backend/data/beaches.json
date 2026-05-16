@@ -1,0 +1,35 @@
+[
+  {
+    "id": "znjane",
+    "name": "Žnjan Beach",
+    "location": "Split, Croatia",
+    "stream_url": "https://cdn-006.whatsupcams.com/hls/hr_buildznjan01.m3u8",
+    "stream_headers": {
+      "Referer": "https://www.whatsupcams.com/hr/webcams/hrvatska/splitsko-dalmatinska/split-hr/split-obnova-znjanskog-platoa/",
+      "User-Agent": "Mozilla/5.0"
+    },
+    "description": "Žnjan beach reconstruction area, eastern Split."
+  },
+  {
+    "id": "bacvice",
+    "name": "Bačvice Beach",
+    "location": "Split, Croatia",
+    "stream_url": "https://cdn-004.whatsupcams.com/hls/hr_splitbacvice01.m3u8",
+    "stream_headers": {
+      "Referer": "https://www.whatsupcams.com/hr/webcams/hrvatska/splitsko-dalmatinska/split-hr/split-plaza-bacvice/",
+      "User-Agent": "Mozilla/5.0"
+    },
+    "description": "Bačvice beach, famous for picigin, central Split."
+  },
+  {
+    "id": "airport",
+    "name": "Split Airport (Divulje/Trogir)",
+    "location": "Divulje, Croatia",
+    "stream_url": "https://cdn-004.whatsupcams.com/hls/hr_split04.m3u8",
+    "stream_headers": {
+      "Referer": "https://www.whatsupcams.com/hr/webcams/hrvatska/splitsko-dalmatinska/split-hr/european-coastal-airlines-split-divulje-zracna-luka-trogir/",
+      "User-Agent": "Mozilla/5.0"
+    },
+    "description": "European Coastal Airlines base, Split Airport area."
+  }
+]
