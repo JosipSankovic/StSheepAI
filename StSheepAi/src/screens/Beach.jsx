@@ -98,12 +98,53 @@ const BEACHES = [
   },
 ];
 
+// Maps frontend beach IDs to backend beach IDs where they differ
+const BACKEND_ID = { znjan: "znjane" };
+
+function vlmToBeachFields(analysis, cap) {
+  const here = analysis.people.estimated_count;
+  const crowd = cap ? Math.round(here / cap * 100) : 0;
+  const cond = analysis.weather.condition;
+  const wind = analysis.weather.wind_estimate;
+  const weather = `${cond.charAt(0).toUpperCase() + cond.slice(1)} · ${wind}`;
+  const waitMap = { low: "Plenty of space", moderate: "Getting busy", crowded: "Very busy", very_crowded: "Packed — avoid" };
+  const wait = waitMap[analysis.people.crowd_level] ?? "—";
+  return { vlm: analysis, here, crowd, weather, wait };
+}
+
 export default function Beach() {
   const [openId, setOpenId] = React.useState("bacvice");
+  const [liveAnalyses, setLiveAnalyses] = React.useState({});
   const seaTemperatures = useSeaTemperatures(BEACHES);
+
+  React.useEffect(() => {
+    const targets = BEACHES
+      .filter(b => b.stream)
+      .map(b => ({ id: b.id, backendId: BACKEND_ID[b.id] ?? b.id }));
+
+    Promise.allSettled(
+      targets.map(({ id, backendId }) =>
+        fetch(`http://localhost:8000/beaches/${backendId}/latest-analysis`)
+          .then(r => r.ok ? r.json() : null)
+          .then(data => data ? { id, data } : null)
+      )
+    ).then(results => {
+      const analyses = {};
+      results.forEach(r => {
+        if (r.status === "fulfilled" && r.value) analyses[r.value.id] = r.value.data;
+      });
+      if (Object.keys(analyses).length) setLiveAnalyses(analyses);
+    });
+  }, []);
+
   const beaches = React.useMemo(
-    () => BEACHES.map(beach => ({ ...beach, liveWater: seaTemperatures[beach.id] })),
-    [seaTemperatures],
+    () => BEACHES.map(beach => {
+      const base = { ...beach, liveWater: seaTemperatures[beach.id] };
+      const analysis = liveAnalyses[beach.id];
+      if (!analysis) return base;
+      return { ...base, ...vlmToBeachFields(analysis, beach.cap) };
+    }),
+    [seaTemperatures, liveAnalyses],
   );
   const open = beaches.find(b => b.id === openId) || beaches[0];
   const openWater = getWaterTemperature(open);

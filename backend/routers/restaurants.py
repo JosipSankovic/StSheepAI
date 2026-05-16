@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
@@ -5,6 +8,13 @@ from models.restaurant import RestaurantReview
 from services.review_service import generate_review
 
 router = APIRouter()
+
+_REVIEWS_FILE = Path(__file__).parent.parent / "data" / "reviews.json"
+
+
+@router.get("")
+def list_reviews() -> list[dict]:
+    return json.loads(_REVIEWS_FILE.read_text())
 
 
 class ReviewRequest(BaseModel):

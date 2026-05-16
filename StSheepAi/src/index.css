@@ -128,7 +128,6 @@ input, textarea { font-family: inherit; }
   inset: 106px 0 86px;
   overflow-y: auto;
   overflow-x: hidden;
-  scroll-behavior: smooth;
 }
 .scroll::-webkit-scrollbar { width: 0; }
 

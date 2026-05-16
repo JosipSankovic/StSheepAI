@@ -22,7 +22,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = 0
+    if (scrollRef.current) scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' })
   }, [tab])
 
   return (
