@@ -12,15 +12,15 @@ import { Placeholder, ScreenHeader } from '../ui.jsx'
 */
 
 const LANGS = [
-  { code: "en", label: "English",   flag: "🇬🇧" },
-  { code: "hr", label: "Hrvatski",  flag: "🇭🇷" },
-  { code: "de", label: "Deutsch",   flag: "🇩🇪" },
-  { code: "it", label: "Italiano",  flag: "🇮🇹" },
-  { code: "fr", label: "Français",  flag: "🇫🇷" },
-  { code: "es", label: "Español",   flag: "🇪🇸" },
-  { code: "ja", label: "日本語",    flag: "🇯🇵" },
-  { code: "zh", label: "中文",      flag: "🇨🇳" },
-  { code: "ko", label: "한국어",    flag: "🇰🇷" },
+  { code: "en", label: "English",   flag: "🇬🇧", speech: "en-US" },
+  { code: "hr", label: "Hrvatski",  flag: "🇭🇷", speech: "hr-HR" },
+  { code: "de", label: "Deutsch",   flag: "🇩🇪", speech: "de-DE" },
+  { code: "it", label: "Italiano",  flag: "🇮🇹", speech: "it-IT" },
+  { code: "fr", label: "Français",  flag: "🇫🇷", speech: "fr-FR" },
+  { code: "es", label: "Español",   flag: "🇪🇸", speech: "es-ES" },
+  { code: "ja", label: "日本語",    flag: "🇯🇵", speech: "ja-JP" },
+  { code: "zh", label: "中文",      flag: "🇨🇳", speech: "zh-CN" },
+  { code: "ko", label: "한국어",    flag: "🇰🇷", speech: "ko-KR" },
 ];
 
 const COPY = {
@@ -310,7 +310,28 @@ const LANDMARKS = [
   { id: "marjan",    short: "marjan", tone: "sun" },
 ];
 
+const DEMO_PHOTOS = {
+  peristyle: {
+    url: "https://commons.wikimedia.org/wiki/Special:FilePath/Peristyle_of_Diocletian%27s_Palace%2C_Split_%2811908116224%29.jpg?width=900",
+    credit: "Following Hadrian / Wikimedia Commons",
+  },
+  belltower: {
+    url: "https://commons.wikimedia.org/wiki/Special:FilePath/Cathedral_of_Saint_Domnius_Bell_Tower_In_Split.jpg?width=900",
+    credit: "RajashreeTalukdar / Wikimedia Commons",
+  },
+  riva: {
+    url: "https://commons.wikimedia.org/wiki/Special:FilePath/Split_-_Riva_003.jpg?width=900",
+    credit: "JoJan / Wikimedia Commons",
+  },
+  marjan: {
+    url: "https://commons.wikimedia.org/wiki/Special:FilePath/Split-Marjan-01.jpg?width=900",
+    credit: "SchiDD / Wikimedia Commons",
+  },
+};
+
 function CameraView({ copy, onCapture, onBackLang }) {
+  const previewLandmark = LANDMARKS[0];
+
   return (
     <div>
       <div style={{ padding: "0 18px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -345,8 +366,14 @@ function CameraView({ copy, onCapture, onBackLang }) {
           background: "#0c1219",
           boxShadow: "0 18px 40px -20px rgba(0,0,0,0.5)",
         }}>
-          {/* faux camera feed */}
-          <Placeholder tone="sea" ratio="3/4" style={{ borderRadius: 0, height: "100%", aspectRatio: "auto", position: "absolute", inset: 0 }}/>
+          {/* Demo camera feed */}
+          <DemoPhoto
+            landmarkId={previewLandmark.id}
+            tone={previewLandmark.tone}
+            label="Live demo camera"
+            ratio="3/4"
+            style={{ borderRadius: 0, height: "100%", aspectRatio: "auto", position: "absolute", inset: 0 }}
+          />
 
           {/* corner brackets */}
           <Corners/>
@@ -406,7 +433,7 @@ function CameraView({ copy, onCapture, onBackLang }) {
 
       {/* Demo selection */}
       <div style={{ padding: "16px 22px 8px" }}>
-        <div className="tag">Demo · tap a landmark to simulate</div>
+        <div className="tag">Demo · tap a real sample photo to simulate</div>
       </div>
       <div style={{ padding: "0 18px 24px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         {LANDMARKS.map((L, i) => (
@@ -417,7 +444,7 @@ function CameraView({ copy, onCapture, onBackLang }) {
               border: "1px solid var(--line)", background: "#fff",
               cursor: "pointer", fontFamily: "inherit", textAlign: "left",
             }}>
-            <Placeholder tone={L.tone} ratio="16/10" label={L.short} style={{ borderRadius: 0 }}/>
+            <DemoPhoto landmarkId={L.id} tone={L.tone} ratio="16/10" label={L.short} style={{ borderRadius: 0 }}/>
           </button>
         ))}
       </div>
@@ -453,7 +480,7 @@ function Scanning({ copy, pickedId }) {
         borderRadius: 24, overflow: "hidden",
         background: "#0c1219",
       }}>
-        <Placeholder tone={tone} ratio="3/4" style={{ borderRadius: 0, height: "100%", aspectRatio: "auto", position: "absolute", inset: 0 }}/>
+        <DemoPhoto landmarkId={pickedId} tone={tone} ratio="3/4" style={{ borderRadius: 0, height: "100%", aspectRatio: "auto", position: "absolute", inset: 0 }}/>
         <div style={{ position: "absolute", inset: 0, background: "rgba(13,28,44,0.55)" }}/>
 
         {/* scanning grid */}
@@ -502,20 +529,44 @@ function Scanning({ copy, pickedId }) {
 /* ── Step 4: result — 3 cards ───────────────────────────────────────── */
 
 function ResultView({ lang, copy, result, onRetake, onLang }) {
+  const landmarkId = Object.entries(RESULTS).find(([, value]) => value === result)?.[0];
   const name = result.name[lang] || result.name.en;
   const text = result[lang] || result.en;
+  const [isSpeaking, setIsSpeaking] = React.useState(false);
+  const [audioMessage, setAudioMessage] = React.useState("");
   const cards = [
     { icon: "📜", label: copy.labels.c1, body: text.c1, tone: "sea" },
     { icon: "✦",  label: copy.labels.c2, body: text.c2, tone: "sun" },
     { icon: "✺",  label: copy.labels.c3, body: text.c3, tone: "terra" },
   ];
+  const audioText = buildAudioText(name, cards);
+  const speechLang = LANGS.find(L => L.code === lang)?.speech || "en-US";
+
+  React.useEffect(() => () => stopGuideAudio(), []);
+
+  function playAudio() {
+    const didStart = speakGuideText(audioText, speechLang, () => setIsSpeaking(false));
+
+    if (!didStart) {
+      setAudioMessage("Audio is not supported in this browser.");
+      return;
+    }
+
+    setAudioMessage("");
+    setIsSpeaking(true);
+  }
+
+  function stopAudio() {
+    stopGuideAudio();
+    setIsSpeaking(false);
+  }
 
   return (
     <div>
       {/* Hero with photo */}
       <div style={{ padding: "0 18px" }}>
         <div style={{ position: "relative", borderRadius: 24, overflow: "hidden" }}>
-          <Placeholder tone={result.tone} ratio="4/3" style={{ borderRadius: 0 }}/>
+          <DemoPhoto landmarkId={landmarkId} tone={result.tone} ratio="4/3" style={{ borderRadius: 0 }}/>
           <div style={{
             position: "absolute", inset: 0,
             background: "linear-gradient(180deg, rgba(13,28,44,0.1) 0%, rgba(13,28,44,0.85) 100%)",
@@ -546,12 +597,77 @@ function ResultView({ lang, copy, result, onRetake, onLang }) {
             <div className="serif" style={{ fontSize: 28, lineHeight: 1.05, letterSpacing: 0, textWrap: "balance" }}>
               {name}
             </div>
+            {landmarkId && DEMO_PHOTOS[landmarkId] && (
+              <div style={{ marginTop: 6, fontSize: 10, opacity: 0.72 }}>
+                Demo photo: {DEMO_PHOTOS[landmarkId].credit}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* 3 cards */}
       <div style={{ padding: "20px 18px 0", display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="fade-up" style={{
+          background: "var(--sea-deep)",
+          color: "#fff",
+          borderRadius: 20,
+          padding: "14px",
+          display: "grid",
+          gap: 10,
+          boxShadow: "0 12px 30px -18px rgba(13,28,44,0.45)",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
+            <div>
+              <div className="tag" style={{ color: "rgba(255,255,255,0.68)" }}>Audio guide</div>
+              <div style={{ fontWeight: 750, marginTop: 2 }}>Listen instead of reading</div>
+            </div>
+            <div style={{
+              width: 38,
+              height: 38,
+              borderRadius: 999,
+              display: "grid",
+              placeItems: "center",
+              background: "rgba(255,255,255,0.12)",
+            }}>
+              {isSpeaking ? "▮▮" : "▶"}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={playAudio} style={{
+              flex: 1,
+              border: 0,
+              borderRadius: 14,
+              padding: "12px",
+              background: "var(--sun)",
+              color: "var(--sea-deep)",
+              fontFamily: "inherit",
+              fontWeight: 800,
+              cursor: "pointer",
+            }}>
+              {isSpeaking ? "Restart audio" : "Play audio"}
+            </button>
+            <button onClick={stopAudio} disabled={!isSpeaking} style={{
+              border: "1px solid rgba(255,255,255,0.18)",
+              borderRadius: 14,
+              padding: "12px 14px",
+              background: "rgba(255,255,255,0.1)",
+              color: "#fff",
+              fontFamily: "inherit",
+              fontWeight: 700,
+              cursor: isSpeaking ? "pointer" : "not-allowed",
+              opacity: isSpeaking ? 1 : 0.55,
+            }}>
+              Stop
+            </button>
+          </div>
+
+          {audioMessage && (
+            <div style={{ fontSize: 12, color: "var(--sun-soft)" }}>{audioMessage}</div>
+          )}
+        </div>
+
         {cards.map((c, i) => (
           <InfoCard key={i} c={c} delay={i * 90} num={i + 1}/>
         ))}
@@ -588,6 +704,107 @@ function ResultView({ lang, copy, result, onRetake, onLang }) {
       </div>
     </div>
   );
+}
+
+function DemoPhoto({ landmarkId, tone, label, ratio = "4/3", style }) {
+  const [failed, setFailed] = React.useState(false);
+  const photo = DEMO_PHOTOS[landmarkId];
+
+  if (!photo || failed) {
+    return <Placeholder tone={tone} ratio={ratio} label={label} style={style}/>;
+  }
+
+  return (
+    <div style={{
+      aspectRatio: ratio,
+      borderRadius: 14,
+      position: "relative",
+      overflow: "hidden",
+      background: "#0c1219",
+      ...style,
+    }}>
+      <img
+        src={photo.url}
+        alt={label || landmarkId}
+        loading="lazy"
+        onError={() => setFailed(true)}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
+        }}
+      />
+      <div style={{
+        position: "absolute",
+        inset: 0,
+        background: "linear-gradient(180deg, rgba(13,28,44,0.05) 25%, rgba(13,28,44,0.62) 100%)",
+        pointerEvents: "none",
+      }}/>
+      {label && (
+        <div style={{
+          position: "absolute",
+          left: 10,
+          right: 10,
+          bottom: 10,
+          color: "#fff",
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 8,
+          alignItems: "flex-end",
+        }}>
+          <span style={{
+            fontFamily: "JetBrains Mono, monospace",
+            fontSize: 10,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            textShadow: "0 1px 4px rgba(0,0,0,0.45)",
+          }}>
+            {label}
+          </span>
+          <span style={{
+            fontSize: 9,
+            opacity: 0.75,
+            textAlign: "right",
+            textShadow: "0 1px 4px rgba(0,0,0,0.45)",
+          }}>
+            real demo
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function buildAudioText(name, cards) {
+  return [
+    name,
+    ...cards.map(card => `${card.label}. ${card.body}`),
+  ].join(". ");
+}
+
+function speakGuideText(text, lang, onEnd) {
+  if (!("speechSynthesis" in window) || !("SpeechSynthesisUtterance" in window)) {
+    return false;
+  }
+
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = lang;
+  utterance.rate = 0.92;
+  utterance.pitch = 1;
+  utterance.onend = onEnd;
+  utterance.onerror = onEnd;
+
+  window.speechSynthesis.speak(utterance);
+  return true;
+}
+
+function stopGuideAudio() {
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
 }
 
 function InfoCard({ c, delay, num }) {
