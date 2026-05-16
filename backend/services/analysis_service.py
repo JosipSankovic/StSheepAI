@@ -4,7 +4,7 @@ from pathlib import Path
 
 from openai import OpenAI
 
-from config import settings
+from config import settings,vlm_model_name
 from models.beach import BeachAnalysis
 
 logger = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ def analyze_image(image_path: Path, beach_name: str) -> BeachAnalysis | None:
 
     try:
         response = client.beta.chat.completions.parse(
-            model="gpt-4o",
+            model=vlm_model_name,
             messages=[{
                 "role": "user",
                 "content": [

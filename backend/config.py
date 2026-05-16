@@ -12,3 +12,6 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+vlm_model_name = "gpt-4o"
+llm_model_name = "gpt-5.5"
