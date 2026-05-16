@@ -27,9 +27,23 @@ The screen toggles between two views. The **list view** is a searchable, scrolla
 This matters because the difference between a low-risk and high-risk restaurant in Split's tourist centre can be the difference between a memorable meal and an overpriced disappointment.
 
 ### AI Photo Guide
-Point your camera at a Split landmark and get an instant explanation — what it is, historical facts, and how it's used today. Supports 9 languages (EN, HR, DE, IT, FR, ES, JA, ZH, KO).
+Split's old town is dense with 1,700 years of layered history — Roman walls, medieval churches, Venetian palaces, and Ottoman-era streets packed into a few city blocks. Most tourists walk past extraordinary things without knowing what they are, and the audio guides they rent at the tourist office cover only the top five landmarks. SplitTura turns every camera tap into an instant expert explanation.
 
-The app accesses the device camera via `getUserMedia`, captures a frame on shutter press, and sends the image along with the user's GPS coordinates to the backend. The backend calls GPT-4o with the image and location context and returns the landmark name, a confidence score, and three info cards — all in the user's chosen language. Results are read aloud via the Web Speech API.
+**How it works**
+The user selects their language (9 supported: EN, HR, DE, IT, FR, ES, JA, ZH, KO), then points their device camera at any landmark. The app accesses the live camera feed via `getUserMedia`. When the shutter button is pressed, the current frame is captured to a canvas element and encoded as a JPEG. The image is sent to the backend alongside the user's GPS coordinates obtained via the Geolocation API (defaulting to Split city centre if permission is denied).
+
+The backend passes both the image and the location to GPT-4o as a vision prompt. The location context helps the model disambiguate — knowing the user is in Split, Croatia narrows identification significantly. GPT-4o returns a structured JSON response with the landmark name, a confidence score, and three info cards written entirely in the user's chosen language.
+
+**What the app shows**
+After a short scanning animation the result screen presents:
+- **Identified landmark name** with a confidence percentage badge
+- **Card 1 — What is this?** Historical background: what the place is, when it was built, and its original purpose
+- **Card 2 — Did you know?** A single surprising or counterintuitive fact most tourists never hear
+- **Card 3 — Today it's used for…** The landmark's current role in the city's daily life
+- **Audio guide** — all three cards read aloud via the Web Speech API in the selected language, at a natural pace, so the user can listen while looking at the landmark rather than reading a screen
+
+**Why it matters**
+A Japanese tourist standing in front of the Peristyle has no way of knowing that the sphinx to their right is 3,500 years old — older than the palace it stands in — or that Diocletian, who built the palace, was later buried in a tomb that early Christians converted into the cathedral that still holds Mass every Sunday. That story, delivered in Japanese, in 15 seconds, is what the AI Photo Guide does.
 
 ### Beach Monitor
 In summer, Split's beaches go from empty to dangerously overcrowded within a couple of hours — and there is no reliable way for a tourist to know which beach is worth the trip before they leave their accommodation. SplitTura solves this with a real-time beach intelligence system driven by live webcams and AI vision.
